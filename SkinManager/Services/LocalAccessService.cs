@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -122,6 +123,10 @@ namespace SkinManager.Services
         /// <returns>If the operation succeeded.</returns>        
         public bool CreateStructure(IEnumerable<SkinType> skinTypes, string skinsFolder)
         {
+            if (!skinTypes.Any())
+            {
+                skinTypes = PopulateDefaultStructure();
+            }
             foreach (SkinType currentType in skinTypes)
             {
                 CreateFolder(Path.Combine(skinsFolder, currentType.Name));
@@ -142,6 +147,10 @@ namespace SkinManager.Services
         /// <returns>If the operation succeeded.</returns>        
         public async Task<bool> CreateStructureAsync(IEnumerable<SkinType> skinTypes, string skinsFolder)
         {
+            if (!skinTypes.Any())
+            {
+                skinTypes = PopulateDefaultStructure();
+            }
             bool succeeded = false;
             await Task.Run(() =>
             {
@@ -772,6 +781,26 @@ namespace SkinManager.Services
                             "Attack", "Buff", "Healing","Other"
                         }));
             return defaultSkinTypes;
+        }
+
+        /// <summary>
+        /// Generates a list of default skin types.
+        /// </summary>
+        /// <returns>The default list of skin types</returns>
+        private static IEnumerable<SkinType> PopulateDefaultStructure()
+        {
+            List<SkinType> skinTypes = new List<SkinType>();
+            skinTypes.Add(new SkinType("Area", new List<string>() { "Forest" }));
+            skinTypes.Add(new SkinType("Armor", new List<string>() { "Arm" }));
+            skinTypes.Add(new SkinType("Box", new List<string>() { "All" }));
+            skinTypes.Add(new SkinType("Class", new List<string>() { "Warrior" }));
+            skinTypes.Add(new SkinType("Effect", new List<string>() { "Fire" }));
+            skinTypes.Add(new SkinType("Enemy", new List<string>() { "Grunt" }));
+            skinTypes.Add(new SkinType("Helper", new List<string>() { "Guardian" }));
+            skinTypes.Add(new SkinType("Shield", new List<string>() { "Broad" }));
+            skinTypes.Add(new SkinType("UI", new List<string>() { "HUD" }));
+            skinTypes.Add(new SkinType("Weapon", new List<string>() { "Sword" }));
+            return skinTypes;
         }
 
         /// <summary>
