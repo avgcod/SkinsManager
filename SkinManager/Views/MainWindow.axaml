@@ -35,23 +35,31 @@
       <ColumnDefinition Width="auto"/>
     </Grid.ColumnDefinitions>
 
-    <TextBlock  Grid.Row="0" Grid.Column="0"
-                Text="Game:"
-                VerticalAlignment="Center"/>
-    <ComboBox Grid.Row="0" Grid.Column="1"
-              Grid.ColumnSpan="2"
-              Margin="0 0 0 5"
-              MinWidth="300"
-              ItemsSource="{Binding GamesList}"
-              SelectedItem="{Binding SelectedGame}">
+    
 
-      <ComboBox.ItemTemplate>
-        <DataTemplate DataType="models:GameInfo">
-          <TextBlock Text="{Binding GameName}"/>
-        </DataTemplate>
-      </ComboBox.ItemTemplate>
+    <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+                Orientation="Horizontal" Spacing="5">
+      <TextBlock  Text="Game:" VerticalAlignment="Center"/>
+      <ComboBox x:Name="gamesListcbx" Margin="0 0 0 5" MinWidth="225"
+                ItemsSource="{Binding GamesList}"
+                SelectedItem="{Binding SelectedGame}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate DataType="models:GameInfo">
+            <TextBlock Text="{Binding GameName}"/>
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+      
+      <TextBlock Text="Source:" VerticalAlignment="Center"/>
 
-    </ComboBox>
+      <ComboBox x:Name="skinsSourceCbx"
+                MinWidth="200"
+                ItemsSource="{Binding SkinsSourceList}"
+                SelectedItem="{Binding SelectedSource}"
+                IsEnabled="{Binding GameIsKnown}"/>
+      </StackPanel>
+
+      
 
 
     <TextBlock Grid.Row="1"

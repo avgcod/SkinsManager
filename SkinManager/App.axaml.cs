@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
-using SkinManager.Services;
 using SkinManager.ViewModels;
 using SkinManager.Views;
 using CommunityToolkit.Mvvm.Messaging;
@@ -13,13 +12,8 @@ namespace SkinManager
     {
         private const string _gameInfoFile = "GameInfo.json";
         private const string _appliedSkinsFile = "AppliedSkins.json";
+        private const string _knownGamesFile = "KnownGames.json";
 
-        private readonly LocalAccessService _fileAccessService;
-
-        public App()
-        {
-            _fileAccessService = new LocalAccessService(); ;
-        }
 
         public override void Initialize()
         {
@@ -35,7 +29,7 @@ namespace SkinManager
                 BindingPlugins.DataValidators.RemoveAt(0);
                 desktop.MainWindow = new MainWindow();
                 desktop.MainWindow.DataContext = new MainWindowViewModel(desktop.MainWindow, _gameInfoFile,
-                    _appliedSkinsFile, _fileAccessService, StrongReferenceMessenger.Default);
+                    _appliedSkinsFile, _knownGamesFile, StrongReferenceMessenger.Default);
                 desktop.MainWindow.Closing += ((MainWindowViewModel)desktop.MainWindow.DataContext).OnWindowClosing;
             }
 

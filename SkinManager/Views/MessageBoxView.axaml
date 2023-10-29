@@ -1,0 +1,29 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:SkinManager.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="180" d:DesignHeight="70"
+        x:Class="SkinManager.Views.MessageBoxView"
+        x:DataType="vm:MessageBoxViewViewModel"
+        Title="Notice"
+        WindowStartupLocation="CenterOwner"
+        SystemDecorations="BorderOnly"
+        SizeToContent="WidthAndHeight">
+
+  <StackPanel Orientation="Vertical"
+              Spacing="10"
+              Margin="5">
+
+    <TextBlock Text="{Binding MessageText}" HorizontalAlignment="Center"/>
+
+    <Button Content="OK"
+            HorizontalContentAlignment="Center"
+            HorizontalAlignment="Center"
+            Command="{Binding OKCommand}"
+            Margin="0 0 5 0"
+            Width="50"
+            x:Name="btnOk"/>
+
+  </StackPanel>
+</Window>

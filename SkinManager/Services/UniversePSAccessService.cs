@@ -1,7 +1,9 @@
-﻿using SkinManager.Models;
+﻿using CommunityToolkit.Mvvm.Messaging;
+using SkinManager.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,142 +11,138 @@ namespace SkinManager.Services
 {
     public class UniversePSAccessService : ISkinsAccessService
     {
-        public bool ApplySkin(string sourceLocation, string destination)
+        private readonly string _siteAddress;
+
+        public UniversePSAccessService(string siteAddress)
+        {
+            _siteAddress = siteAddress;
+        }
+        public void ApplySkin(string sourceLocation, string destination, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public Task<bool> ApplySkinAsync(string sourceLocation, string destination)
+        public Task ApplySkinAsync(string sourceLocation, string destination, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public bool CreateBackUp(string sourceLocation, string backUpLocation, string installationLocation)
+        public void CreateBackUp(string sourceLocation, string backUpLocation, string installationLocation, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public Task<bool> CreateBackUpAsync(string sourceLocation, string backUpLocation, string installationLocation)
+        public Task CreateBackUpAsync(string sourceLocation, string backUpLocation, string installationLocation, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public bool CreateFolder(string location)
+        public void CreateFolder(string location, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public Task<bool> CreateFolderAsync(string location)
+        public Task CreateFolderAsync(string location, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public bool CreateStructure(IEnumerable<SkinType> skinTypes, string skinsFolder)
+        public void CreateStructure(IEnumerable<SkinType> skinTypes, string skinsFolder, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public Task<bool> CreateStructureAsync(IEnumerable<SkinType> skinTypes, string skinsFolder)
+        public Task CreateStructureAsync(IEnumerable<SkinType> skinTypes, string skinsFolder, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public Task<bool> DirectoryExistsAsync(string directoryName)
+        public IEnumerable<string> GetAppliedSkins(string appliedSkinsFile, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public Task<bool> FileExistsAsync(string fileName)
+        public Task<IEnumerable<string>> GetAppliedSkinsAsync(string appliedSkinsFile, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public IEnumerable<string> GetAppliedSkins(string appliedSkinsFile)
+        public IEnumerable<Skin> GetAvailableSkins(string skinsFolder, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public Task<IEnumerable<string>> GetAppliedSkinsAsync(string appliedSkinsFile)
+        public Task<IEnumerable<Skin>> GetAvailableSkinsAsync(string skinsFolder, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public IEnumerable<Skin> GetAvailableSkins(string skinsFolder)
+        public IEnumerable<GameInfo> GetGameInfo(string gameInfoFileName, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public Task<IEnumerable<Skin>> GetAvailableSkinsAsync(string skinsFolder)
+        public Task<IEnumerable<GameInfo>> GetGameInfoAsync(string gameInfoFileName, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public IEnumerable<GameInfo> GetGameInfo(string gameInfoFileName)
+        public IEnumerable<SkinType> GetSkinTypes(string subTypesFile, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public Task<IEnumerable<GameInfo>> GetGameInfoAsync(string gameInfoFileName)
+        public Task<IEnumerable<SkinType>> GetSkinTypesAsync(string subTypesFile, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public IEnumerable<SkinType> GetSkinTypes(string subTypesFile)
+        public void RestoreBackup(string sourceLocation, string destinationLocation, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public Task<IEnumerable<SkinType>> GetSkinTypesAsync(string subTypesFile)
+        public Task RestoreBackupAsync(string sourceLocation, string destinationLocation, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public bool RestoreBackup(string originalLocation, string backupLocation)
+        public void SaveAppliedSkins(IEnumerable<string> appliedSkins, string appliedSkinsFileName, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public Task<bool> RestoreBackupAsync(string originalLocation, string backupLocation)
+        public Task SaveAppliedSkinsAsync(IEnumerable<string> appliedSkins, string appliedSkinsFileName, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public bool SaveAppliedSkins(IEnumerable<string> appliedSkins, string appliedSkinsFileName)
+        public void SaveGameInfo(IEnumerable<GameInfo> gameInfo, string gameInfoFileName, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public Task<bool> SaveAppliedSkinsAsync(IEnumerable<string> appliedSkins, string appliedSkinsFileName)
+        public Task SaveGameInfoAsync(IEnumerable<GameInfo> gameInfo, string gameInfoFileName, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public bool SaveGameInfo(IEnumerable<GameInfo> gameInfo, string gameInfoFileName)
+        public void SaveSkinTypes(IEnumerable<SkinType> skinTypes, string skinTypeSubTypesFile, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public Task<bool> SaveGameInfoAsync(IEnumerable<GameInfo> gameInfo, string gameInfoFileName)
+        public Task SaveSkinTypesAsync(IEnumerable<SkinType> skinTypes, string skinTypeSubTypesFile, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public bool SaveSkinTypes(IEnumerable<SkinType> skinTypes, string skinTypeSubTypesFile)
+        public void StartGame(string fileLocation, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
 
-        public Task<bool> SaveSkinTypesAsync(IEnumerable<SkinType> skinTypes, string skinTypeSubTypesFile)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void StartGame(string fileLocation)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task StartGameAsync(string fileLocation)
+        public Task StartGameAsync(string fileLocation, IMessenger messenger)
         {
             throw new NotImplementedException();
         }
