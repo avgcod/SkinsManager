@@ -148,7 +148,7 @@ namespace SkinManager.ViewModels
 
             if (GamesList.Count > 1)
             {
-                SavePathInformation();
+                SaveGamePathInformation();
                 await SettingsLoaderService.SaveGameInfoAsync(GamesList, _directoriesFile, _theMessenger);
                 for (int i = 0; i < GamesList.Count; i++)
                 {
@@ -160,7 +160,14 @@ namespace SkinManager.ViewModels
             }
         }
 
-
+        protected override void OnPropertyChanging(PropertyChangingEventArgs e)
+        {
+            if (e.PropertyName == nameof(SelectedGame) && !string.IsNullOrEmpty(SelectedGame.GameName))
+            {
+                SaveGamePathInformation();
+            }
+            base.OnPropertyChanging(e);
+        }
         private async void SkinManagerViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(SelectedGame))
@@ -180,7 +187,6 @@ namespace SkinManager.ViewModels
                 if (!SelectedGame.GameName.Equals("New"))
                 {
                     UpdateLocationsInfo();
-                    SavePathInformation();
 
                     ComboBox? skinsSourcecbx = _currentWindow.Find<ComboBox>("skinsSourceCbx");
                     if (skinsSourcecbx != null)
@@ -199,7 +205,7 @@ namespace SkinManager.ViewModels
 
         }
 
-        private void SavePathInformation()
+        private void SaveGamePathInformation()
         {
             int gameIndex = GetSelectedGameIndex();
             GamesList[gameIndex].SkinsLocation = SkinsLocation;
@@ -241,7 +247,7 @@ namespace SkinManager.ViewModels
                     });
                 }
             }
-            if(GamesList.SingleOrDefault(x => x.GameName == newgameInfo.GameName) is null)
+            if (GamesList.SingleOrDefault(x => x.GameName == newgameInfo.GameName) is null)
             {
                 GamesList.Add(newgameInfo);
             }
@@ -287,7 +293,6 @@ namespace SkinManager.ViewModels
             }
 
         }
-
 
         #region Commands
         public bool CanStartGame => !string.IsNullOrEmpty(GameExecutableLocation) && !Busy;

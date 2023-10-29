@@ -9,15 +9,15 @@ using System.Threading.Tasks;
 namespace SkinManager.Services
 {
     /// <summary>
-    /// This class loads settings from the local file system.
+    /// This class loads settings information from the local file system.
     /// </summary>
     public static class SettingsLoaderService
     {
         /// <summary>
-        /// Gets the game information.
+        /// Loads a collection of GameInfo from a JSON file.
         /// </summary>
-        /// <param name="gameInfoFileName">File location of the game info.</param>
-        /// <returns>List of game information.</returns>
+        /// <param name="gameInfoFileName">JSON file to load.</param>
+        /// <returns>Collection of GameInfo.</returns>
         public static IEnumerable<GameInfo> GetGameInfo(string gameInfoFileName, IMessenger messenger)
         {
             /*
@@ -57,10 +57,10 @@ namespace SkinManager.Services
             }
         }
         /// <summary>
-        /// Gets the game information.
+        /// Loads a collection of GameInfo from a JSON file.
         /// </summary>
-        /// <param name="gameInfoFileName">File location of the game info.</param>
-        /// <returns>List of game information.</returns>
+        /// <param name="gameInfoFileName">JSON file to load.</param>
+        /// <returns>Collection of GameInfo.</returns>
         public static async Task<IEnumerable<GameInfo>> GetGameInfoAsync(string gameInfoFileName, IMessenger messenger)
         {
             try
@@ -81,11 +81,16 @@ namespace SkinManager.Services
             }
 
         }
+        /// <summary>
+        /// Saves a collection of GameInfo to a JSON file.
+        /// </summary>
+        /// <param name="gameInfo">Collection of GameInfo to save.</param>
+        /// <param name="gameInfoFileName">JSON file to save to.</param>
         public static void SaveGameInfo(IEnumerable<GameInfo> gameInfo, string gameInfoFileName, IMessenger messenger)
         {
             try
             {
-                JsonSerializer.Serialize<IEnumerable<GameInfo>>(File.OpenWrite(gameInfoFileName), gameInfo, new JsonSerializerOptions() { WriteIndented = true });
+                JsonSerializer.Serialize(File.OpenWrite(gameInfoFileName), gameInfo, new JsonSerializerOptions() { WriteIndented = true });
             }
             catch (Exception ex)
             {
@@ -94,17 +99,16 @@ namespace SkinManager.Services
 
         }
         /// <summary>
-        /// Saves the current directories to a JSON file.
+        /// Saves a collection of GameInfo to a JSON file.
         /// </summary>
-        /// <param name="gameInfo">List of gameInfo to save.</param>
-        /// <param name="gameInfoFileName">Name of the XML file.</param>
-        /// <exception cref="Exception">Error saving.</exception>
+        /// <param name="gameInfo">Collection of GameInfo to save.</param>
+        /// <param name="gameInfoFileName">JSON file to save to.</param>
         public static async Task SaveGameInfoAsync(IEnumerable<GameInfo> gameInfo, string gameInfoFileName, IMessenger messenger)
         {
             try
             {
                 using Stream writer = File.OpenWrite(gameInfoFileName);
-                await JsonSerializer.SerializeAsync<IEnumerable<GameInfo>>(writer, gameInfo, new JsonSerializerOptions() { WriteIndented = true });
+                await JsonSerializer.SerializeAsync(writer, gameInfo, new JsonSerializerOptions() { WriteIndented = true });
                 writer.Close();
             }
             catch (Exception ex)
@@ -114,10 +118,10 @@ namespace SkinManager.Services
 
         }
         /// <summary>
-        /// Gets the game information.
+        /// Gets the known game information to prepopulate skin type and web skins resource.
         /// </summary>
-        /// <param name="gameInfoFileName">File location of the game info.</param>
-        /// <returns>List of game information.</returns>
+        /// <param name="gameInfoFileName">JSON file of the known game info.</param>
+        /// <returns>Collection of known game information.</returns>
         public static IEnumerable<KnownGameInfo> GetKnowGamesInfo(string knownGameInfoFileName, IMessenger messenger)
         {
             /*
@@ -157,10 +161,10 @@ namespace SkinManager.Services
             }
         }
         /// <summary>
-        /// Gets the game information.
+        /// Gets the known game information to prepopulate skin type and web skins resource.
         /// </summary>
-        /// <param name="gameInfoFileName">File location of the game info.</param>
-        /// <returns>List of game information.</returns>
+        /// <param name="gameInfoFileName">JSON file of the known game info.</param>
+        /// <returns>Collection of known game information.</returns>
         public static async Task<IEnumerable<KnownGameInfo>> GetKnowGamesInfoAsync(string knownGameInfoFileName, IMessenger messenger)
         {
             try
@@ -180,6 +184,25 @@ namespace SkinManager.Services
                 return new List<KnownGameInfo>();
             }
 
+        }
+        /// <summary>
+        /// Saves a collection of KnownGameInfo to a file.
+        /// </summary>
+        /// <param name="knownGamesList">the collection of KnownGameInfo.</param>
+        /// <param name="fileName">JSON file to save to.</param>
+        /// <param name="messenger">Messenger to use if there is an error.</param>
+        public static async Task SaveKnownGamesListAsync(IEnumerable<KnownGameInfo> knownGamesList, string fileName, IMessenger messenger)
+        {
+            try
+            {
+                using Stream writer = File.OpenWrite(fileName);
+                await JsonSerializer.SerializeAsync(writer, knownGamesList, new JsonSerializerOptions() { WriteIndented = true });
+                writer.Close();
+            }
+            catch (Exception ex)
+            {
+                messenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+            }
         }
         /// <summary>
         /// Checks if a file exists.
