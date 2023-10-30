@@ -75,15 +75,17 @@ public class LocalSkinsAccessService : ISkinsAccessService
     /// <param name="messenger">Messenger to use if there is an error.</param>
     private void CreateFolder(string directoryName, IMessenger messenger)
     {
-        try
+        if (!Directory.Exists(directoryName))
         {
-            Directory.CreateDirectory(directoryName);
+            try
+            {
+                Directory.CreateDirectory(directoryName);
+            }
+            catch (Exception ex)
+            {
+                messenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+            }
         }
-        catch (Exception ex)
-        {
-            messenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-        }
-
     }
     /// <summary>
     /// Creates a folder.
@@ -191,15 +193,16 @@ public class LocalSkinsAccessService : ISkinsAccessService
     {
         try
         {
+            DirectoryInfo skinDirectory = new DirectoryInfo(skinDirectoryName);
             DirectoryInfo[] subDirs = new DirectoryInfo(skinDirectoryName).GetDirectories("*.*", SearchOption.AllDirectories);
 
             foreach (DirectoryInfo currentFolder in subDirs)
             {
-                CreateFolder(Path.Combine(backUpDirectoryName, currentFolder.FullName.Replace(currentFolder.FullName, string.Empty)), messenger);
+                CreateFolder(backUpDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty), messenger);
                 foreach (FileInfo theFile in currentFolder.GetFiles())
                 {
-                    File.Copy(Path.Combine(gameDirectoryName, currentFolder.FullName.Replace(currentFolder.FullName, string.Empty), theFile.Name),
-                            Path.Combine(backUpDirectoryName, currentFolder.FullName.Replace(currentFolder.FullName, string.Empty), theFile.Name), true);
+                    File.Copy(gameDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name,
+                        backUpDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name, false);
                 }
 
             }
@@ -220,17 +223,18 @@ public class LocalSkinsAccessService : ISkinsAccessService
     {
         try
         {
-            DirectoryInfo[] subDirs = await Task.Run(() => new DirectoryInfo(skinDirectoryName).GetDirectories("*.*", SearchOption.AllDirectories));
+            DirectoryInfo skinDirectory = new DirectoryInfo(skinDirectoryName);
+            DirectoryInfo[] subDirs = await Task.Run(() => skinDirectory.GetDirectories("*.*", SearchOption.AllDirectories));
 
             await Task.Run(async () =>
             {
                 foreach (DirectoryInfo currentFolder in subDirs)
                 {
-                    await CreateFolderAsync(Path.Combine(backUpDirectoryName, currentFolder.FullName.Replace(currentFolder.FullName, string.Empty)), messenger);
+                    await CreateFolderAsync(backUpDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty), messenger);
                     foreach (FileInfo theFile in currentFolder.GetFiles())
                     {
-                        File.Copy(Path.Combine(gameDirectoryName, currentFolder.FullName.Replace(currentFolder.FullName, string.Empty), theFile.Name),
-                                Path.Combine(backUpDirectoryName, currentFolder.FullName.Replace(currentFolder.FullName, string.Empty), theFile.Name), false);
+                        File.Copy(gameDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name,
+                                backUpDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name, false);
                     }
                 }
             });
@@ -240,27 +244,33 @@ public class LocalSkinsAccessService : ISkinsAccessService
             messenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
         }
     }
-#endregion
+    #endregion
 
     /// <summary>
     /// This method retores backed up game files to the game installation.
     /// </summary>
     /// <param name="sourceLocation">The back up location.</param>
     /// <param name="destinationLocation">The game installation location.</param>
-    public void RestoreBackup(string sourceLocation, string destinationLocation, IMessenger messenger)
+    public void RestoreBackup(string skinDirectoryName, string gameDirectoryName, IMessenger messenger)
     {
         try
         {
-            if (Directory.Exists(sourceLocation) && Directory.Exists(destinationLocation))
+            DirectoryInfo skinDirectory = new DirectoryInfo(skinDirectoryName);
+            DirectoryInfo[] subDirs = new DirectoryInfo(skinDirectoryName).GetDirectories("*.*", SearchOption.AllDirectories);
+
+            foreach (DirectoryInfo currentFolder in subDirs)
             {
-                foreach (DirectoryInfo currentDirectory in new DirectoryInfo(sourceLocation).GetDirectories("*.*", SearchOption.AllDirectories))
+                foreach (FileInfo theFile in currentFolder.GetFiles())
                 {
-                    foreach (FileInfo theFile in currentDirectory.GetFiles())
+                    string gameFilename = skinDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) +
+                        Path.DirectorySeparatorChar + theFile.Name;
+                    if (File.Exists(gameFilename))
                     {
-                        File.Copy(Path.Combine(sourceLocation, currentDirectory.FullName.Replace(currentDirectory.FullName, string.Empty), theFile.Name),
-                            Path.Combine(destinationLocation, currentDirectory.FullName.Replace(currentDirectory.FullName, string.Empty), theFile.Name), true);
+                        File.Copy(skinDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name,
+                            gameDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name, true);
                     }
                 }
+
             }
         }
         catch (Exception ex)
@@ -274,26 +284,29 @@ public class LocalSkinsAccessService : ISkinsAccessService
     /// </summary>
     /// <param name="sourceLocation">The back up location.</param>
     /// <param name="destinationLocation">The game installation location.</param>
-    public async Task RestoreBackupAsync(string sourceLocation, string destinationLocation, IMessenger messenger)
+    public async Task RestoreBackupAsync(string skinDirectoryName, string gameDirectoryName, IMessenger messenger)
     {
         try
         {
-            if (await DirectoryExistsAsync(sourceLocation, messenger) && await DirectoryExistsAsync(destinationLocation, messenger))
+            DirectoryInfo skinDirectory = new DirectoryInfo(skinDirectoryName);
+            DirectoryInfo[] subDirs = await Task.Run(() => skinDirectory.GetDirectories("*.*", SearchOption.AllDirectories));
+
+            await Task.Run(async () =>
             {
-                await Task.Run(() =>
+                foreach (DirectoryInfo currentFolder in subDirs)
                 {
-                    foreach (DirectoryInfo currentDirectory in new DirectoryInfo(sourceLocation).GetDirectories("*.*", SearchOption.AllDirectories))
+                    foreach (FileInfo theFile in currentFolder.GetFiles())
                     {
-                        foreach (FileInfo theFile in currentDirectory.GetFiles())
+                        string gameFilename = gameDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) +
+                        Path.DirectorySeparatorChar + theFile.Name;
+                        if (await FileExistsAsync(gameFilename, messenger))
                         {
-                            File.Copy(Path.Combine(sourceLocation, currentDirectory.FullName.Replace(currentDirectory.FullName, string.Empty), theFile.Name),
-                                    Path.Combine(destinationLocation, currentDirectory.FullName.Replace(currentDirectory.FullName, string.Empty), theFile.Name), true);
+                            File.Copy(skinDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name,
+                                gameDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name, true);
                         }
                     }
-
-                });
-            }
-
+                }
+            });
         }
         catch (Exception ex)
         {

@@ -13,7 +13,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Security.AccessControl;
 using System.Threading.Tasks;
 
 namespace SkinManager.ViewModels
@@ -31,14 +30,12 @@ namespace SkinManager.ViewModels
 
         #region Collections
         [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(SkinTypeNames))]
+        [NotifyPropertyChangedFor(nameof(SkinTypes))]
         private ObservableCollection<Skin> _skins = new ObservableCollection<Skin>();
 
-        public IEnumerable<string> SkinTypeNames => Skins.Select(x => x.SkinType).Select(x => x.Name).Distinct();
+        public IEnumerable<SkinType> SkinTypes => Skins.DistinctBy(x => x.SkinType.Name).Select(x => x.SkinType);
 
-        public IEnumerable<string> SkinSubTypeNames => Skins.Where(x => x.SkinType.Name == SelectedSkinType).Select(x => x.SubType).Distinct();
-
-        public IEnumerable<string> AvailableSkinNames => Skins.Where(x => x.SkinType.Name == SelectedSkinType && x.SubType == SelectedSkinSubType).Select(x => x.Name);
+        public IEnumerable<string> AvailableSkinNames => Skins.Where(x => x.SkinType.Name == SelectedSkinType.Name && x.SubType == SelectedSkinSubType).Select(x => x.Name);
 
         [ObservableProperty]
         private ObservableCollection<Skin> _appliedSkins = new ObservableCollection<Skin>();
@@ -64,34 +61,21 @@ namespace SkinManager.ViewModels
         private string _selectedSource = string.Empty;
         public string SelectedSkinLocation => Skins.SingleOrDefault(x => x.Name == SelectedSkinName)?.Location ?? string.Empty;
         public string AppliedSkinName => GetAppliedSkinNameFromLocation();
-
-        public string BackUpLocation => Path.Combine(SkinsLocation, "Originals", SelectedSkinType, SelectedSkinSubType);
-        [ObservableProperty]
-        [NotifyCanExecuteChangedFor(nameof(CreateBackupCommand))]
-        [NotifyCanExecuteChangedFor(nameof(ReloadSkinsCommand))]
-        [NotifyCanExecuteChangedFor(nameof(CreateStructureCommand))]
-        public string _skinsLocation = string.Empty;
-
-        [ObservableProperty]
-        [NotifyCanExecuteChangedFor(nameof(CreateBackupCommand))]
-        public string _installLocation = string.Empty;
-
-        [ObservableProperty]
-        [NotifyCanExecuteChangedFor(nameof(StartGameCommand))]
-        public string _gameExecutableLocation = string.Empty;
+        public string BackUpLocation => Path.Combine(SelectedGame.SkinsLocation, SelectedSkinType.Name, "Originals", SelectedSkinSubType);
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(ApplySkinCommand))]
         [NotifyCanExecuteChangedFor(nameof(CreateBackupCommand))]
         public string _selectedSkinName = string.Empty;
 
+
         [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(SkinSubTypeNames))]
-        public string _selectedSkinType = string.Empty;
+        public SkinType _selectedSkinType = new SkinType(string.Empty, new List<string>());
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(AvailableSkinNames))]
         [NotifyPropertyChangedFor(nameof(AppliedSkinName))]
+        [NotifyCanExecuteChangedFor(nameof(RestoreCommand))]
         public string _selectedSkinSubType = string.Empty;
 
         [ObservableProperty]
@@ -144,11 +128,12 @@ namespace SkinManager.ViewModels
 
         public async void OnWindowClosing(object? sender, CancelEventArgs e)
         {
-            _theMessenger.UnregisterAll(this);
+            _theMessenger.Unregister<NewGameMessage>(this);
+            _theMessenger.Unregister<OperationErrorMessage>(this);
+            _theMessenger.Unregister<DirectoryNotEmptyMessage>(this);
 
             if (GamesList.Count > 1)
             {
-                SaveGamePathInformation();
                 await SettingsLoaderService.SaveGameInfoAsync(GamesList, _directoriesFile, _theMessenger);
                 for (int i = 0; i < GamesList.Count; i++)
                 {
@@ -158,15 +143,6 @@ namespace SkinManager.ViewModels
                     }
                 }
             }
-        }
-
-        protected override void OnPropertyChanging(PropertyChangingEventArgs e)
-        {
-            if (e.PropertyName == nameof(SelectedGame) && !string.IsNullOrEmpty(SelectedGame.GameName))
-            {
-                SaveGamePathInformation();
-            }
-            base.OnPropertyChanging(e);
         }
         private async void SkinManagerViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
@@ -186,16 +162,14 @@ namespace SkinManager.ViewModels
             {
                 if (!SelectedGame.GameName.Equals("New"))
                 {
-                    UpdateLocationsInfo();
+                    await LoadSkinsAsync();
+                    await LoadAppliedSkinsAsync();
 
                     ComboBox? skinsSourcecbx = _currentWindow.Find<ComboBox>("skinsSourceCbx");
                     if (skinsSourcecbx != null)
                     {
-                        skinsSourcecbx.SelectedIndex = 0;
+                        skinsSourcecbx.SelectedIndex = GamesList.IndexOf(SelectedGame);
                     }
-
-                    await LoadSkinsAsync();
-                    await LoadAppliedSkinsAsync();
                 }
                 else if (SelectedGame.GameName.Equals("New"))
                 {
@@ -203,22 +177,6 @@ namespace SkinManager.ViewModels
                 }
             }
 
-        }
-
-        private void SaveGamePathInformation()
-        {
-            int gameIndex = GetSelectedGameIndex();
-            GamesList[gameIndex].SkinsLocation = SkinsLocation;
-            GamesList[gameIndex].GameLocation = InstallLocation;
-            GamesList[gameIndex].GameExecutable = GameExecutableLocation;
-        }
-
-        private void UpdateLocationsInfo()
-        {
-            int gameIndex = GetSelectedGameIndex();
-            SkinsLocation = GamesList[gameIndex].SkinsLocation;
-            InstallLocation = GamesList[gameIndex].GameLocation;
-            GameExecutableLocation = GamesList[gameIndex].GameExecutable;
         }
 
         private async Task ShowAddNewGameDialog()
@@ -262,17 +220,20 @@ namespace SkinManager.ViewModels
         }
         private async Task LoadAppliedSkinsAsync()
         {
-            int gameIndex = GetSelectedGameIndex();
-            GamesList[gameIndex].AppliedSkins = new List<string>(
-                await _skinsAccessService.GetAppliedSkinsAsync(Path.Combine(SelectedGame.GameName, _appliedSkinsFile), _theMessenger));
+            SelectedGame.AppliedSkins = (await _skinsAccessService.GetAppliedSkinsAsync(Path.Combine(SelectedGame.GameName, _appliedSkinsFile), _theMessenger)).ToList();
         }
         public async Task LoadSkinsAsync()
         {
-            Skins = new ObservableCollection<Skin>(await _skinsAccessService.GetAvailableSkinsAsync(SkinsLocation, _theMessenger));
+            Skins = new ObservableCollection<Skin>(await _skinsAccessService.GetAvailableSkinsAsync(SelectedGame.SkinsLocation, _theMessenger));
+
             if (Skins.Any())
             {
-                SelectedSkinType = SkinTypeNames.First();
-                SelectedSkinSubType = SkinSubTypeNames.First();
+                LoadSkinTypeSubTypes();
+                SelectedSkinType = SkinTypes.First();
+                if (SelectedSkinType.SubTypes.Any())
+                {
+                    SelectedSkinSubType = SelectedSkinType.SubTypes.First();
+                }
 
                 StructureCreated = true;
             }
@@ -281,36 +242,48 @@ namespace SkinManager.ViewModels
                 StructureCreated = false;
             }
         }
+        private void LoadSkinTypeSubTypes()
+        {
+            foreach (SkinType currentSkinType in SkinTypes)
+            {
+                currentSkinType.SubTypes = Skins.Where(x => x.SkinType.Name == currentSkinType.Name).Select(x => x.SubType).Distinct().ToList();
+            }
+        }
         #endregion
 
         public void AddAppliedSkin(string appliedSkinName)
         {
-            int gameIndex = GetSelectedGameIndex();
-            string appliedSkin = Skins.Single(x => x.Name == appliedSkinName).Location;
-            if (!GamesList[gameIndex].AppliedSkins.Contains(appliedSkin))
+            if (!SelectedGame.AppliedSkins.Contains(appliedSkinName))
             {
-                GamesList[gameIndex].AppliedSkins.Add(appliedSkin);
+                SelectedGame.AppliedSkins.Add(appliedSkinName);
             }
+        }
 
+        public void RemoveAppliedSkin(string removedSkinName)
+        {
+            if (SelectedGame.AppliedSkins.Contains(removedSkinName))
+            {
+                SelectedGame.AppliedSkins.Remove(removedSkinName);
+            }
         }
 
         #region Commands
-        public bool CanStartGame => !string.IsNullOrEmpty(GameExecutableLocation) && !Busy;
-        public bool CanReloadSkins => !string.IsNullOrEmpty(SkinsLocation) && !Busy;
-        public bool CanCreateStructure => !string.IsNullOrEmpty(SkinsLocation) && !StructureCreated && !Busy;
-        public bool CanBackup => StructureCreated && !string.IsNullOrEmpty(SkinsLocation)
-                && !string.IsNullOrEmpty(InstallLocation)
+        public bool CanStartGame => !string.IsNullOrEmpty(SelectedGame.GameExecutable) && !Busy;
+        public bool CanReloadSkins => !string.IsNullOrEmpty(SelectedGame.SkinsLocation) && !Busy;
+        public bool CanCreateStructure => !string.IsNullOrEmpty(SelectedGame.SkinsLocation) && !StructureCreated && !Busy;
+        public bool CanBackup => StructureCreated && !string.IsNullOrEmpty(SelectedGame.SkinsLocation)
+                && !string.IsNullOrEmpty(SelectedGame.GameLocation)
                 && !string.IsNullOrEmpty(SelectedSkinName) && !Busy;
         public bool CanBrowse => !string.IsNullOrEmpty(SelectedGame?.GameName) && !string.Equals(SelectedGame?.GameName, "New") && !Busy;
-        public bool CanApply => !string.IsNullOrEmpty(SkinsLocation) && !string.IsNullOrEmpty(GameExecutableLocation) && !Busy;
-        public bool CanRestore => File.Exists(BackUpLocation) && !Busy;
+        public bool CanApply => !string.IsNullOrEmpty(SelectedGame.SkinsLocation) && !string.IsNullOrEmpty(SelectedGame.GameExecutable) && !Busy;
+        public bool CanRestore => Directory.Exists(BackUpLocation) && !Busy;
 
         [RelayCommand(CanExecute = nameof(CanStartGame))]
         public async Task StartGameAsync()
         {
             Busy = true;
 
-            await _skinsAccessService.StartGameAsync(GameExecutableLocation, _theMessenger);
+            await _skinsAccessService.StartGameAsync(SelectedGame.GameExecutable, _theMessenger);
 
             Busy = false;
         }
@@ -333,11 +306,11 @@ namespace SkinManager.ViewModels
             if (KnownGamesList.SingleOrDefault(x => x.GameName == SelectedGame.GameName) != null)
             {
                 IEnumerable<SkinType> knownStructure = await _skinsAccessService.GetSkinTypesAsync(SelectedGame.GameName + ".json", _theMessenger);
-                await _skinsAccessService.CreateStructureAsync(knownStructure, SkinsLocation, _theMessenger);
+                await _skinsAccessService.CreateStructureAsync(knownStructure, SelectedGame.SkinsLocation, _theMessenger);
             }
             else
             {
-                await _skinsAccessService.CreateStructureAsync(Skins.Select(x => x.SkinType).Distinct(), SkinsLocation, _theMessenger);
+                await _skinsAccessService.CreateStructureAsync(Skins.Select(x => x.SkinType).Distinct(), SelectedGame.SkinsLocation, _theMessenger);
             }
 
             StructureCreated = true;
@@ -369,14 +342,13 @@ namespace SkinManager.ViewModels
 
             if (location.Any())
             {
-                int gameIndex = GetSelectedGameIndex();
                 if (parameter?.ToString() == "Skins" && location[0].CanBookmark)
                 {
-                    SkinsLocation = await location[0].SaveBookmarkAsync() ?? string.Empty;
+                    SelectedGame.SkinsLocation = await location[0].SaveBookmarkAsync() ?? string.Empty;
                 }
                 else
                 {
-                    InstallLocation = await location[0].SaveBookmarkAsync() ?? string.Empty;
+                    SelectedGame.GameLocation = await location[0].SaveBookmarkAsync() ?? string.Empty;
                 }
             }
 
@@ -398,8 +370,7 @@ namespace SkinManager.ViewModels
             {
                 if (location[0].CanBookmark)
                 {
-                    int gameIndex = GetSelectedGameIndex();
-                    GameExecutableLocation = await location[0].SaveBookmarkAsync() ?? string.Empty;
+                    SelectedGame.GameExecutable = await location[0].SaveBookmarkAsync() ?? string.Empty;
                 }
             }
 
@@ -411,7 +382,7 @@ namespace SkinManager.ViewModels
         {
             Busy = true;
 
-            await _skinsAccessService.CreateBackUpAsync(SelectedSkinLocation, BackUpLocation, InstallLocation, _theMessenger);
+            await _skinsAccessService.CreateBackUpAsync(SelectedSkinLocation, BackUpLocation, SelectedGame.GameLocation, _theMessenger);
 
             Busy = false;
         }
@@ -421,7 +392,7 @@ namespace SkinManager.ViewModels
         {
             Busy = true;
 
-            await _skinsAccessService.ApplySkinAsync(SelectedSkinLocation, InstallLocation, _theMessenger);
+            await _skinsAccessService.ApplySkinAsync(SelectedSkinLocation, SelectedGame.GameLocation, _theMessenger);
             AddAppliedSkin(SelectedSkinName);
 
             Busy = false;
@@ -432,7 +403,8 @@ namespace SkinManager.ViewModels
         {
             Busy = true;
 
-            await _skinsAccessService.RestoreBackupAsync(BackUpLocation, InstallLocation, _theMessenger);
+            await _skinsAccessService.RestoreBackupAsync(BackUpLocation, SelectedGame.GameLocation, _theMessenger);
+            RemoveAppliedSkin(SelectedSkinName);
 
             Busy = false;
         }
@@ -491,12 +463,9 @@ namespace SkinManager.ViewModels
 
             await mboxView.ShowDialog(_currentWindow);
         }
+
         #endregion
 
-        private int GetSelectedGameIndex()
-        {
-            return GamesList.IndexOf(GamesList.Single(x => x.GameName == SelectedGame.GameName));
-        }
 
         private void SetSkinAccessService()
         {
@@ -514,14 +483,18 @@ namespace SkinManager.ViewModels
             //}
         }
 
+        /// <summary>
+        /// Gets the name of the applied skin from the skin location.
+        /// </summary>
+        /// <returns>name of the applied skin or none if none are found.</returns>
         private string GetAppliedSkinNameFromLocation()
         {
             if (!string.IsNullOrEmpty(SelectedGame.GameName))
             {
-                foreach (string skinLocation in GamesList[GetSelectedGameIndex()].AppliedSkins)
+                foreach (string skinLocation in SelectedGame.AppliedSkins)
                 {
                     Skin? foundSkin = Skins.SingleOrDefault(x => x.Location == skinLocation);
-                    if (foundSkin?.SkinType.Name == SelectedSkinType && foundSkin?.SubType == SelectedSkinSubType)
+                    if (foundSkin?.SkinType.Name == SelectedSkinType.Name && foundSkin?.SubType == SelectedSkinSubType)
                     {
                         return foundSkin.Name;
                     }

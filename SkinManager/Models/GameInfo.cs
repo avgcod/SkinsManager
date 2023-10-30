@@ -1,13 +1,19 @@
-﻿using System.Collections.Generic;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using System.Collections.Generic;
 
 namespace SkinManager.Models
 {
-    public class GameInfo
+    public partial class GameInfo : ObservableObject
     {
-        public string GameName { get; set; } = string.Empty;
-        public string SkinsLocation { get; set; } = string.Empty;
-        public string GameLocation { get; set; } = string.Empty;
-        public string GameExecutable { get; set; } = string.Empty;
-        public List<string> AppliedSkins { get; set; } = new List<string>();
+        [ObservableProperty]
+        public string _gameName = string.Empty;
+        [ObservableProperty]
+        public string _skinsLocation = string.Empty;
+        [ObservableProperty]
+        public string _gameLocation = string.Empty;
+        [ObservableProperty]
+        public string _gameExecutable = string.Empty;
+        [ObservableProperty]
+        public List<string> _appliedSkins  = new List<string>();
     }
 }

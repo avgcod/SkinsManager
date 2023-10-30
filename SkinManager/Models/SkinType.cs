@@ -1,19 +1,20 @@
-﻿using Avalonia;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
-using System.Data;
+using System.Linq;
 
 namespace SkinManager.Models
 {
-    public class SkinType
+    public partial class SkinType : ObservableObject
     {
         public string Name { get; }
-        public List<string> SubTypes { get; }
+        [ObservableProperty]
+        private List<string> _subTypes = new List<string>();
 
-        public SkinType(string name, List<string> subTypes)
+        public SkinType(string name, IEnumerable<string> subTypes)
         {
             Name = name;
-            SubTypes = subTypes;
+            SubTypes = subTypes.ToList();
         }
 
         public override string ToString()
@@ -36,7 +37,7 @@ namespace SkinManager.Models
                 return skinType1 is not null && skinType1.Equals(skinType2);
             }
         }
-
+            
         public static bool operator !=(SkinType skinType1, SkinType skinType2)
         {
             return !(skinType1 == skinType2);

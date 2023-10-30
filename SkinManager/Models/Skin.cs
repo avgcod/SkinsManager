@@ -1,8 +1,9 @@
-﻿using System;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using System;
 
 namespace SkinManager.Models
 {
-    public class Skin
+    public partial class Skin : ObservableObject
     {
         public SkinType SkinType { get; }
         public string SubType { get; } = string.Empty;
