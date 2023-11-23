@@ -53,7 +53,7 @@
 
 
 
-      <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+      <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
                   Orientation="Horizontal" Spacing="5">
         <TextBlock  Text="Game:" VerticalAlignment="Center"/>
         <ComboBox x:Name="gamesListcbx" Margin="0 0 0 5" MinWidth="225"
@@ -69,14 +69,18 @@
         <TextBlock Text="Source:" VerticalAlignment="Center"/>
 
         <ComboBox x:Name="skinsSourceCbx"
-                  MinWidth="200"
-                  ItemsSource="{Binding SkinsSourceList}"
+                  MinWidth="100"
                   SelectedItem="{Binding SelectedSource}"
-                  IsEnabled="False"/>
-                  <!--IsEnabled="{Binding GameIsKnown}"-->
+                  IsEnabled="{Binding GameIsKnown}"
+                  VerticalAlignment="Center">
+          <ComboBoxItem Content="Local"/>
+          <ComboBoxItem Content="Web"/>
+        </ComboBox>
       </StackPanel>
-
-
+      
+      <Button Grid.Row="0" Grid.Column="2" Content="Add Game"
+              HorizontalAlignment="Center"
+              Command="{Binding AddNewGameCommand}"/>
 
       <TextBlock Grid.Row="1"
                  Grid.Column="0"

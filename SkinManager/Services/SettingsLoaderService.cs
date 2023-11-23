@@ -9,16 +9,23 @@ using System.Threading.Tasks;
 namespace SkinManager.Services
 {
     /// <summary>
-    /// This class loads settings information from the local file system.
+    /// This class facilitates loading and saving settings information to the local file system.
     /// </summary>
-    public static class SettingsLoaderService
+    public class SettingsLoaderService : ISettingsLoaderService
     {
+        private readonly IMessenger _theMessenger;
+
+        public SettingsLoaderService(IMessenger theMessenger)
+        {
+            _theMessenger = theMessenger;
+        }
+
         /// <summary>
         /// Loads a collection of GameInfo from a JSON file.
         /// </summary>
         /// <param name="gameInfoFileName">JSON file to load.</param>
         /// <returns>Collection of GameInfo.</returns>
-        public static IEnumerable<GameInfo> GetGameInfo(string gameInfoFileName, IMessenger messenger)
+        public IEnumerable<GameInfo> GetGameInfo(string gameInfoFileName)
         {
             /*
              * List<string> directories = new List<string>();
@@ -52,7 +59,7 @@ namespace SkinManager.Services
             }
             catch (Exception ex)
             {
-                messenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
                 return new List<GameInfo>();
             }
         }
@@ -61,7 +68,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="gameInfoFileName">JSON file to load.</param>
         /// <returns>Collection of GameInfo.</returns>
-        public static async Task<IEnumerable<GameInfo>> GetGameInfoAsync(string gameInfoFileName, IMessenger messenger)
+        public async Task<IEnumerable<GameInfo>> GetGameInfoAsync(string gameInfoFileName)
         {
             try
             {
@@ -76,7 +83,7 @@ namespace SkinManager.Services
             }
             catch (Exception ex)
             {
-                messenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
                 return new List<GameInfo>();
             }
 
@@ -86,7 +93,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="gameInfo">Collection of GameInfo to save.</param>
         /// <param name="gameInfoFileName">JSON file to save to.</param>
-        public static void SaveGameInfo(IEnumerable<GameInfo> gameInfo, string gameInfoFileName, IMessenger messenger)
+        public void SaveGameInfo(IEnumerable<GameInfo> gameInfo, string gameInfoFileName)
         {
             try
             {
@@ -94,7 +101,7 @@ namespace SkinManager.Services
             }
             catch (Exception ex)
             {
-                messenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
             }
 
         }
@@ -103,7 +110,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="gameInfo">Collection of GameInfo to save.</param>
         /// <param name="gameInfoFileName">JSON file to save to.</param>
-        public static async Task SaveGameInfoAsync(IEnumerable<GameInfo> gameInfo, string gameInfoFileName, IMessenger messenger)
+        public async Task SaveGameInfoAsync(IEnumerable<GameInfo> gameInfo, string gameInfoFileName)
         {
             try
             {
@@ -113,16 +120,16 @@ namespace SkinManager.Services
             }
             catch (Exception ex)
             {
-                messenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
             }
 
         }
         /// <summary>
-        /// Gets the known game information to prepopulate skin type and web skins resource.
+        /// Loads the KnownGameInfo to prepopulate skin type and web skins resource.
         /// </summary>
-        /// <param name="gameInfoFileName">JSON file of the known game info.</param>
-        /// <returns>Collection of known game information.</returns>
-        public static IEnumerable<KnownGameInfo> GetKnowGamesInfo(string knownGameInfoFileName, IMessenger messenger)
+        /// <param name="knownGameInfoFileName">JSON file of the known game info.</param>
+        /// <returns>Collection of KnownGameInfo.</returns>
+        public IEnumerable<KnownGameInfo> GetKnowGamesInfo(string knownGameInfoFileName)
         {
             /*
              * List<string> directories = new List<string>();
@@ -156,21 +163,21 @@ namespace SkinManager.Services
             }
             catch (Exception ex)
             {
-                messenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
                 return new List<KnownGameInfo>();
             }
         }
         /// <summary>
-        /// Gets the known game information to prepopulate skin type and web skins resource.
+        /// Loads the KnownGameInfo to prepopulate skin type and web skins resource.
         /// </summary>
-        /// <param name="gameInfoFileName">JSON file of the known game info.</param>
-        /// <returns>Collection of known game information.</returns>
-        public static async Task<IEnumerable<KnownGameInfo>> GetKnowGamesInfoAsync(string knownGameInfoFileName, IMessenger messenger)
+        /// <param name="knownGameInfoFileName">JSON file of the known game info.</param>
+        /// <returns>Collection of KnownGameInfo.</returns>
+        public async Task<IEnumerable<KnownGameInfo>> GetKnowGamesInfoAsync(string knownGameInfoFileName)
         {
             try
             {
                 List<KnownGameInfo> theKnownGameInfo = new List<KnownGameInfo>();
-                if (await FileExistsAsync(knownGameInfoFileName, messenger))
+                if (await FileExistsAsync(knownGameInfoFileName))
                 {
                     Stream reader = File.OpenRead(knownGameInfoFileName);
                     theKnownGameInfo = await JsonSerializer.DeserializeAsync<List<KnownGameInfo>>(reader) ?? new List<KnownGameInfo>();
@@ -180,7 +187,7 @@ namespace SkinManager.Services
             }
             catch (Exception ex)
             {
-                messenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
                 return new List<KnownGameInfo>();
             }
 
@@ -188,10 +195,9 @@ namespace SkinManager.Services
         /// <summary>
         /// Saves a collection of KnownGameInfo to a file.
         /// </summary>
-        /// <param name="knownGamesList">the collection of KnownGameInfo.</param>
+        /// <param name="knownGamesList">The collection of KnownGameInfo.</param>
         /// <param name="fileName">JSON file to save to.</param>
-        /// <param name="messenger">Messenger to use if there is an error.</param>
-        public static async Task SaveKnownGamesListAsync(IEnumerable<KnownGameInfo> knownGamesList, string fileName, IMessenger messenger)
+        public async Task SaveKnownGamesListAsync(IEnumerable<KnownGameInfo> knownGamesList, string fileName)
         {
             try
             {
@@ -201,15 +207,15 @@ namespace SkinManager.Services
             }
             catch (Exception ex)
             {
-                messenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
             }
         }
         /// <summary>
         /// Checks if a file exists.
         /// </summary>
-        /// <param name="fileName">File name.</param>
+        /// <param name="fileName">File name to check.</param>
         /// <returns>If the file exists.</returns>
-        private static async Task<bool> FileExistsAsync(string fileName, IMessenger messenger)
+        private async Task<bool> FileExistsAsync(string fileName)
         {
             try
             {
@@ -217,28 +223,11 @@ namespace SkinManager.Services
             }
             catch (Exception ex)
             {
-                messenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
                 return false;
             }
 
         }
 
-        /// <summary>
-        /// Checks if a directory exists.
-        /// </summary>
-        /// <param name="directoryName">Directory name.</param>
-        /// <returns>If the directory exists.</returns>
-        private static async Task<bool> DirectoryExistsAsync(string directoryName, IMessenger messenger)
-        {
-            try
-            {
-                return await Task.Run(() => Directory.Exists(directoryName));
-            }
-            catch (Exception ex)
-            {
-                messenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-                return false;
-            }
-        }
     }
 }

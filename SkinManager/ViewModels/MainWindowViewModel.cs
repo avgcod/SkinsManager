@@ -22,9 +22,7 @@ namespace SkinManager.ViewModels
     public partial class MainWindowViewModel : ViewModelBase, IRecipient<NewGameMessage>, IRecipient<OperationErrorMessage>, IRecipient<DirectoryNotEmptyMessage>
     {
         #region Variables
-        private readonly string _directoriesFile;
-        private readonly string _appliedSkinsFile;
-        private readonly string _knownGamesFile;
+        private readonly Locations _locations;
         private ISkinsAccessService _skinsAccessService;
         private readonly IFileAccessService _fileAccessService;
         private readonly Window _currentWindow;
@@ -52,11 +50,6 @@ namespace SkinManager.ViewModels
         [ObservableProperty]
         private ObservableCollection<KnownGameInfo> _knownGamesList = new ObservableCollection<KnownGameInfo>();
 
-        public IEnumerable<string> SkinsSourceList => new List<string>()
-        {
-            "Local",
-            KnownGamesList.SingleOrDefault(x => x.GameName == SelectedGame.GameName)?.SkinsSiteName ?? string.Empty,
-        };
         #endregion
 
         #region Properties
@@ -90,7 +83,6 @@ namespace SkinManager.ViewModels
         [NotifyCanExecuteChangedFor(nameof(BrowseExecutableCommand))]
         [NotifyCanExecuteChangedFor(nameof(CreateBackupCommand))]
         [NotifyPropertyChangedFor(nameof(GameIsKnown))]
-        [NotifyPropertyChangedFor(nameof(SkinsSourceList))]
         public GameInfo _selectedGame = new GameInfo();
 
         [ObservableProperty]
@@ -108,14 +100,12 @@ namespace SkinManager.ViewModels
         public bool _busy = false;
         #endregion
 
-        public MainWindowViewModel(IHost host, Window currentWindow, Locations locations, 
+        public MainWindowViewModel(IHost host, Window currentWindow, Locations locations,
             ISkinsAccessService skinsAccessService, IFileAccessService fileAccessService, IMessenger theMessenger)
         {
             _host = host;
 
-            _directoriesFile = locations.GameInfoFile;
-            _appliedSkinsFile = locations.AppliedSkinsFile;
-            _knownGamesFile = locations.KnownGamesFile;
+            _locations = locations;
 
             _currentWindow = currentWindow;
             _fileAccessService = fileAccessService;
@@ -146,12 +136,13 @@ namespace SkinManager.ViewModels
 
             if (GamesList.Count > 1)
             {
-                await SettingsLoaderService.SaveGameInfoAsync(GamesList, _directoriesFile, _theMessenger);
+                ISettingsLoaderService settingsLoaderService = _host.Services.GetRequiredService<ISettingsLoaderService>();
+                await settingsLoaderService.SaveGameInfoAsync(GamesList, _locations.GameInfoFile);
                 for (int i = 0; i < GamesList.Count; i++)
                 {
                     if (GamesList[i].AppliedSkins.Any())
                     {
-                        await _fileAccessService.SaveAppliedSkinsAsync(GamesList[i].AppliedSkins, Path.Combine(SelectedGame.GameName, _appliedSkinsFile));
+                        await _fileAccessService.SaveAppliedSkinsAsync(GamesList[i].AppliedSkins, Path.Combine(SelectedGame.GameName, _locations.AppliedSkinsFile));
                     }
                 }
             }
@@ -172,41 +163,25 @@ namespace SkinManager.ViewModels
         {
             if (SelectedGame is not null)
             {
-                if (!SelectedGame.GameName.Equals("New"))
-                {
-                    await LoadSkinsAsync();
-                    await LoadAppliedSkinsAsync();
+                await LoadSkinsAsync();
+                await LoadAppliedSkinsAsync();
 
-                    ComboBox? skinsSourcecbx = _currentWindow.Find<ComboBox>("skinsSourceCbx");
-                    if (skinsSourcecbx != null)
-                    {
-                        skinsSourcecbx.SelectedIndex = GamesList.IndexOf(SelectedGame);
-                    }
-                }
-                else if (SelectedGame.GameName.Equals("New"))
+                if (_currentWindow.Find<ComboBox>("skinsSourceCbx") is { }  skinsSourcecbx)
                 {
-                    await ShowAddNewGameDialog();
+                    skinsSourcecbx.SelectedIndex = GamesList.IndexOf(SelectedGame);
                 }
             }
 
         }
 
-        private async Task ShowAddNewGameDialog()
-        {
-            AddGameView addGameView = new AddGameView();
-            addGameView.DataContext = new AddGameViewModel(addGameView, _theMessenger);
-            await addGameView.ShowDialog(_currentWindow);
-        }
 
         #region LoadMethods
         private async Task LoadGameInfoAsync()
         {
-            GameInfo newgameInfo = new GameInfo()
-            {
-                GameName = "New"
-            };
-            GamesList = new ObservableCollection<GameInfo>(await SettingsLoaderService.GetGameInfoAsync(_directoriesFile, _theMessenger));
-            KnownGamesList = new ObservableCollection<KnownGameInfo>(await SettingsLoaderService.GetKnowGamesInfoAsync(_knownGamesFile, _theMessenger));
+            GameInfo newgameInfo = new GameInfo();
+            ISettingsLoaderService settingsLoaderService = _host.Services.GetRequiredService<ISettingsLoaderService>();
+            GamesList = new ObservableCollection<GameInfo>(await settingsLoaderService.GetGameInfoAsync(_locations.GameInfoFile));
+            KnownGamesList = new ObservableCollection<KnownGameInfo>(await settingsLoaderService.GetKnowGamesInfoAsync(_locations.KnownGamesFile));
             foreach (KnownGameInfo knownGame in KnownGamesList)
             {
                 if (GamesList.SingleOrDefault(x => x.GameName == knownGame.GameName) == null)
@@ -223,8 +198,7 @@ namespace SkinManager.ViewModels
             }
             else
             {
-                ComboBox? gamesListcbx = _currentWindow.Find<ComboBox>("gamesListcbx");
-                if (gamesListcbx != null)
+                if (_currentWindow.Find<ComboBox>("gamesListcbx") is { } gamesListcbx)
                 {
                     gamesListcbx.SelectedIndex = 0;
                 }
@@ -232,7 +206,7 @@ namespace SkinManager.ViewModels
         }
         private async Task LoadAppliedSkinsAsync()
         {
-            SelectedGame.AppliedSkins = (await _fileAccessService.GetAppliedSkinsAsync(Path.Combine(SelectedGame.GameName, _appliedSkinsFile))).ToList();
+            SelectedGame.AppliedSkins = (await _fileAccessService.GetAppliedSkinsAsync(Path.Combine(SelectedGame.GameName, _locations.AppliedSkinsFile))).ToList();
         }
         public async Task LoadSkinsAsync()
         {
@@ -273,10 +247,7 @@ namespace SkinManager.ViewModels
 
         public void RemoveAppliedSkin(string removedSkinName)
         {
-            if (SelectedGame.AppliedSkins.Contains(removedSkinName))
-            {
-                SelectedGame.AppliedSkins.Remove(removedSkinName);
-            }
+            SelectedGame.AppliedSkins.Remove(removedSkinName);
         }
 
         #region Commands
@@ -289,6 +260,14 @@ namespace SkinManager.ViewModels
         public bool CanBrowse => !string.IsNullOrEmpty(SelectedGame?.GameName) && !string.Equals(SelectedGame?.GameName, "New") && !Busy;
         public bool CanApply => !string.IsNullOrEmpty(SelectedGame.SkinsLocation) && !string.IsNullOrEmpty(SelectedGame.GameExecutable) && !Busy;
         public bool CanRestore => Directory.Exists(BackUpLocation) && !Busy;
+
+        [RelayCommand]
+        public async Task AddNewGame()
+        {
+            AddGameView addGameView = new AddGameView();
+            addGameView.DataContext = new AddGameViewModel(addGameView, _theMessenger);
+            await addGameView.ShowDialog(_currentWindow);
+        }
 
         [RelayCommand(CanExecute = nameof(CanStartGame))]
         public async Task StartGameAsync()

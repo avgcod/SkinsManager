@@ -71,6 +71,8 @@ namespace SkinManager
                 => () => provider.GetRequiredService<WebSkinsAccessService>());
             services.AddSingleton<IWebSkinsAccessServiceFactory, WebSkinsAccessServiceFactory>();
 
+            services.AddSingleton<ISettingsLoaderService, SettingsLoaderService>();
+
             services.AddSingleton<Window,MainWindow>();
             services.AddSingleton<MainWindowViewModel>();
 
