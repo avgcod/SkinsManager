@@ -72,9 +72,9 @@
                   MinWidth="200"
                   ItemsSource="{Binding SkinsSourceList}"
                   SelectedItem="{Binding SelectedSource}"
-                  IsEnabled="{Binding GameIsKnown}"/>
+                  IsEnabled="False"/>
+                  <!--IsEnabled="{Binding GameIsKnown}"-->
       </StackPanel>
-
 
 
 

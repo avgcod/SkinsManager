@@ -6,14 +6,14 @@ using System.ComponentModel;
 
 namespace SkinManager.ViewModels
 {
-    public partial class MessageBoxViewViewModel : ViewModelBase
+    public partial class MessageBoxViewModel : ViewModelBase
     {
         private readonly Window _currentWindow;
 
         [ObservableProperty]
         private string _messageText = string.Empty;
 
-        public MessageBoxViewViewModel(Window currentWindow, string messageText)
+        public MessageBoxViewModel(Window currentWindow, string messageText)
         {
             MessageText = messageText;
             _currentWindow = currentWindow;

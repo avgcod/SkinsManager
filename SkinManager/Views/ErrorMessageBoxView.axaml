@@ -4,6 +4,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:SkinManager.ViewModels"
         mc:Ignorable="d" d:DesignWidth="325" d:DesignHeight="250"
+        Width="325" Height="250"
+        MinWidth="325" MinHeight="250"
         x:Class="SkinManager.Views.ErrorMessageBoxView"
         x:DataType="vm:ErrorMessageBoxViewModel"
         Title="Error Occurred"  

@@ -4,12 +4,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:SkinManager.ViewModels"
         mc:Ignorable="d" d:DesignWidth="180" d:DesignHeight="70"
+        Width="180" Height="70"
+        MinWidth="180" MinHeight="70"
         x:Class="SkinManager.Views.MessageBoxView"
-        x:DataType="vm:MessageBoxViewViewModel"
+        x:DataType="vm:MessageBoxViewModel"
         Title="Notice"
         WindowStartupLocation="CenterOwner"
-        SystemDecorations="BorderOnly"
-        SizeToContent="WidthAndHeight">
+        SystemDecorations="BorderOnly">
 
   <StackPanel Orientation="Vertical"
               Spacing="10"
