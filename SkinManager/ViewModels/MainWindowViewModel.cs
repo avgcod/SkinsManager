@@ -27,28 +27,28 @@ namespace SkinManager.ViewModels
         private readonly IFileAccessService _fileAccessService;
         private readonly Window _currentWindow;
         private readonly IMessenger _theMessenger;
-        private readonly IHost _host;
+        private readonly IServiceScopeFactory _scopeFactory;
         #endregion
 
         #region Collections
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(SkinTypes))]
-        private ObservableCollection<Skin> _skins = new ObservableCollection<Skin>();
+        private ObservableCollection<Skin> _skins = [];
 
         public IEnumerable<SkinType> SkinTypes => Skins.DistinctBy(x => x.SkinType.Name).Select(x => x.SkinType);
 
         public IEnumerable<string> AvailableSkinNames => Skins.Where(x => x.SkinType.Name == SelectedSkinType.Name && x.SubType == SelectedSkinSubType).Select(x => x.Name);
 
         [ObservableProperty]
-        private ObservableCollection<Skin> _appliedSkins = new ObservableCollection<Skin>();
+        private ObservableCollection<Skin> _appliedSkins = [];
 
         public IEnumerable<string> OriginalSkinNames => Skins.Where(x => x.IsOriginal == true).Select(x => x.Name);
 
         [ObservableProperty]
-        private ObservableCollection<GameInfo> _gamesList = new ObservableCollection<GameInfo>();
+        private ObservableCollection<GameInfo> _gamesList = [];
 
         [ObservableProperty]
-        private ObservableCollection<KnownGameInfo> _knownGamesList = new ObservableCollection<KnownGameInfo>();
+        private ObservableCollection<KnownGameInfo> _knownGamesList = [];
 
         #endregion
 
@@ -67,7 +67,7 @@ namespace SkinManager.ViewModels
 
 
         [ObservableProperty]
-        public SkinType _selectedSkinType = new SkinType(string.Empty, new List<string>());
+        public SkinType _selectedSkinType = new(string.Empty, new List<string>());
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(AvailableSkinNames))]
@@ -83,7 +83,7 @@ namespace SkinManager.ViewModels
         [NotifyCanExecuteChangedFor(nameof(BrowseExecutableCommand))]
         [NotifyCanExecuteChangedFor(nameof(CreateBackupCommand))]
         [NotifyPropertyChangedFor(nameof(GameIsKnown))]
-        public GameInfo _selectedGame = new GameInfo();
+        public GameInfo _selectedGame = new();
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(CreateStructureCommand))]
@@ -100,10 +100,10 @@ namespace SkinManager.ViewModels
         public bool _busy = false;
         #endregion
 
-        public MainWindowViewModel(IHost host, Window currentWindow, Locations locations,
+        public MainWindowViewModel(IServiceScopeFactory scopeFactory, MainWindow currentWindow, Locations locations,
             ISkinsAccessService skinsAccessService, IFileAccessService fileAccessService, IMessenger theMessenger)
         {
-            _host = host;
+            _scopeFactory = scopeFactory;
 
             _locations = locations;
 
@@ -117,9 +117,7 @@ namespace SkinManager.ViewModels
             _currentWindow.Closing += OnWindowClosing;
             _currentWindow.Loaded += WindowLoaded;
 
-            _theMessenger.Register<NewGameMessage>(this);
-            _theMessenger.Register<OperationErrorMessage>(this);
-            _theMessenger.Register<DirectoryNotEmptyMessage>(this);
+            _theMessenger.RegisterAll(this);
 
         }
 
@@ -130,17 +128,18 @@ namespace SkinManager.ViewModels
 
         public async void OnWindowClosing(object? sender, CancelEventArgs e)
         {
-            _theMessenger.Unregister<NewGameMessage>(this);
-            _theMessenger.Unregister<OperationErrorMessage>(this);
-            _theMessenger.Unregister<DirectoryNotEmptyMessage>(this);
+            _theMessenger.UnregisterAll(this);
+            _currentWindow.Closing -= OnWindowClosing;
+            _currentWindow.Loaded -= WindowLoaded;
 
             if (GamesList.Count > 1)
             {
-                ISettingsLoaderService settingsLoaderService = _host.Services.GetRequiredService<ISettingsLoaderService>();
+                using IServiceScope serviceScope = _scopeFactory.CreateScope();
+                ISettingsLoaderService settingsLoaderService = serviceScope.ServiceProvider.GetRequiredService<ISettingsLoaderService>();
                 await settingsLoaderService.SaveGameInfoAsync(GamesList, _locations.GameInfoFile);
                 for (int i = 0; i < GamesList.Count; i++)
                 {
-                    if (GamesList[i].AppliedSkins.Any())
+                    if (GamesList[i].AppliedSkins.Count > 0)
                     {
                         await _fileAccessService.SaveAppliedSkinsAsync(GamesList[i].AppliedSkins, Path.Combine(SelectedGame.GameName, _locations.AppliedSkinsFile));
                     }
@@ -166,7 +165,7 @@ namespace SkinManager.ViewModels
                 await LoadSkinsAsync();
                 await LoadAppliedSkinsAsync();
 
-                if (_currentWindow.Find<ComboBox>("skinsSourceCbx") is { }  skinsSourcecbx)
+                if (_currentWindow.Find<ComboBox>("skinsSourceCbx") is { } skinsSourcecbx)
                 {
                     skinsSourcecbx.SelectedIndex = GamesList.IndexOf(SelectedGame);
                 }
@@ -178,10 +177,17 @@ namespace SkinManager.ViewModels
         #region LoadMethods
         private async Task LoadGameInfoAsync()
         {
-            GameInfo newgameInfo = new GameInfo();
-            ISettingsLoaderService settingsLoaderService = _host.Services.GetRequiredService<ISettingsLoaderService>();
+            GameInfo newgameInfo = new();
+            ISettingsLoaderService settingsLoaderService;
+
+            using (IServiceScope serviceScope = _scopeFactory.CreateScope())
+            {
+                settingsLoaderService = serviceScope.ServiceProvider.GetRequiredService<ISettingsLoaderService>();
+            }
+
             GamesList = new ObservableCollection<GameInfo>(await settingsLoaderService.GetGameInfoAsync(_locations.GameInfoFile));
             KnownGamesList = new ObservableCollection<KnownGameInfo>(await settingsLoaderService.GetKnowGamesInfoAsync(_locations.KnownGamesFile));
+
             foreach (KnownGameInfo knownGame in KnownGamesList)
             {
                 if (GamesList.SingleOrDefault(x => x.GameName == knownGame.GameName) == null)
@@ -192,6 +198,7 @@ namespace SkinManager.ViewModels
                     });
                 }
             }
+
             if (GamesList.SingleOrDefault(x => x.GameName == newgameInfo.GameName) is null)
             {
                 GamesList.Add(newgameInfo);
@@ -216,7 +223,7 @@ namespace SkinManager.ViewModels
             {
                 LoadSkinTypeSubTypes();
                 SelectedSkinType = SkinTypes.First();
-                if (SelectedSkinType.SubTypes.Any())
+                if (SelectedSkinType.SubTypes.Count > 0)
                 {
                     SelectedSkinSubType = SelectedSkinType.SubTypes.First();
                 }
@@ -264,8 +271,9 @@ namespace SkinManager.ViewModels
         [RelayCommand]
         public async Task AddNewGame()
         {
-            AddGameView addGameView = new AddGameView();
-            addGameView.DataContext = new AddGameViewModel(addGameView, _theMessenger);
+            using IServiceScope serviceScope = _scopeFactory.CreateScope();
+            AddGameView addGameView = serviceScope.ServiceProvider.GetRequiredService<AddGameView>();
+            addGameView.DataContext = serviceScope.ServiceProvider.GetRequiredService<AddGameViewModel>();
             await addGameView.ShowDialog(_currentWindow);
         }
 
@@ -423,7 +431,7 @@ namespace SkinManager.ViewModels
 
             GamesList.Add(new GameInfo()
             {
-                GameName = message.newGameName
+                GameName = message.NewGameName
             });
 
             SelectedGame = GamesList[GamesList.Count - 1];
@@ -439,19 +447,20 @@ namespace SkinManager.ViewModels
 
         private async Task HandleOperationErrorMessageAsync(OperationErrorMessage message)
         {
-            ErrorMessageBoxView emboxView = new ErrorMessageBoxView();
-
-            emboxView.DataContext = new ErrorMessageBoxViewModel(emboxView, message);
-
+            using IServiceScope serviceScope = _scopeFactory.CreateScope();
+            ErrorMessageBoxView emboxView = serviceScope.ServiceProvider.GetRequiredService<ErrorMessageBoxView>();
+            emboxView.DataContext = serviceScope.ServiceProvider.GetRequiredService<ErrorMessageBoxViewModel>();
+            _theMessenger.Send<ErrorMessage>(new(message.ErrorType, message.ErrorText));
             await emboxView.ShowDialog(_currentWindow);
+
         }
 
         private async Task HandleDirectoryNotEmptyMessageAsync(DirectoryNotEmptyMessage message)
         {
-            MessageBoxView mboxView = new MessageBoxView();
-
-            mboxView.DataContext = new MessageBoxViewModel(mboxView, message.DirectoryPath + " is not empty." + Environment.NewLine + "Please select an empty directory.");
-
+            using IServiceScope serviceScope = _scopeFactory.CreateScope();
+            MessageBoxView mboxView = serviceScope.ServiceProvider.GetRequiredService<MessageBoxView>();
+            mboxView.DataContext = serviceScope.ServiceProvider.GetRequiredService<MessageBoxViewModel>();
+            _theMessenger.Send<MessageBoxMessage>(new(message.DirectoryPath + " is not empty." + Environment.NewLine + "Please select an empty directory."));
             await mboxView.ShowDialog(_currentWindow);
         }
 
@@ -462,11 +471,14 @@ namespace SkinManager.ViewModels
         {
             if (SelectedSource == SkinsSource.Local)
             {
-                _skinsAccessService = _host.Services.GetRequiredService<ILocalSkinsAccessServiceFactory>().Create();
+                using IServiceScope serviceScope = _scopeFactory.CreateScope();
+                _skinsAccessService = serviceScope.ServiceProvider.GetRequiredService<ILocalSkinsAccessServiceFactory>().Create();
+
             }
             else
             {
-                _skinsAccessService = _host.Services.GetRequiredService<IWebSkinsAccessServiceFactory>().Create();
+                using IServiceScope serviceScope = _scopeFactory.CreateScope();
+                _skinsAccessService = serviceScope.ServiceProvider.GetRequiredService<IWebSkinsAccessServiceFactory>().Create();
             }
         }
 

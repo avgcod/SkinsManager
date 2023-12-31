@@ -9,7 +9,10 @@ namespace SkinManager.Services
 {
     public interface ILocalSkinsAccessServiceFactory
     {
+        /// <summary>
+        /// Creates an instance of an ISkinsAccessService
+        /// </summary>
+        /// <returns></returns>
         ISkinsAccessService Create();
-        
     }
 }

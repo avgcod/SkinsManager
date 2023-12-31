@@ -7,15 +7,14 @@ using System.Threading.Tasks;
 
 namespace SkinManager.Services
 {
-    public class LocalSkinsAccessServiceFactory : ILocalSkinsAccessServiceFactory
+    public class LocalSkinsAccessServiceFactory(Func<LocalSkinsAccessService> createLocalSkinsAccessService) : ILocalSkinsAccessServiceFactory
     {
-        private readonly Func<LocalSkinsAccessService> _createLocalSkinsAccessService;
-        public LocalSkinsAccessServiceFactory(Func<LocalSkinsAccessService> createLocalSkinsAccessService)
-        {
+        private readonly Func<LocalSkinsAccessService> _createLocalSkinsAccessService = createLocalSkinsAccessService;
 
-            _createLocalSkinsAccessService = createLocalSkinsAccessService;
-
-        }
+        /// <summary>
+        /// Creates an instance of a LocalSkinsAccessService and returns it.
+        /// </summary>
+        /// <returns>A new LocalSkinsAccessService instance.</returns>
         public ISkinsAccessService Create()
         {
             ISkinsAccessService localSkinsAccessService = _createLocalSkinsAccessService();

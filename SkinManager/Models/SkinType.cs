@@ -7,9 +7,9 @@ namespace SkinManager.Models
 {
     public partial class SkinType : ObservableObject
     {
-        public string Name { get; }
+        public string Name { get; } = string.Empty;
         [ObservableProperty]
-        private List<string> _subTypes = new List<string>();
+        private List<string> _subTypes = [];
 
         public SkinType(string name, IEnumerable<string> subTypes)
         {

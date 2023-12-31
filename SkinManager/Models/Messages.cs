@@ -1,6 +1,8 @@
 ﻿namespace SkinManager.Models
 {
-    public record NewGameMessage(string newGameName); 
-    public record class OperationErrorMessage(string ErrorType, string ErrorMessage);
+    public record NewGameMessage(string NewGameName); 
+    public record class OperationErrorMessage(string ErrorType, string ErrorText);
+    public record class ErrorMessage(string ErrorType, string ErrorText);
     public record class DirectoryNotEmptyMessage(string DirectoryPath);
+    public record class MessageBoxMessage(string Message);
 }

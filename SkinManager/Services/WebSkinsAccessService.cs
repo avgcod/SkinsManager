@@ -9,33 +9,61 @@ using System.Threading.Tasks;
 
 namespace SkinManager.Services
 {
-    public class WebSkinsAccessService : ISkinsAccessService
+    public class WebSkinsAccessService(IMessenger theMessenger) : ISkinsAccessService
     {
-        private readonly IMessenger _theMessenger;
-
-        public WebSkinsAccessService(IMessenger theMessenger)
-        {
-            _theMessenger = theMessenger;
-        }
+        private readonly IMessenger _theMessenger = theMessenger;
 
         public IEnumerable<Skin> GetAvailableSkins(string skinsLocation)
         {
-            throw new NotImplementedException();
+            try
+            {
+                throw new NotImplementedException();
+            }
+            catch (Exception ex)
+            {
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                throw new NotImplementedException();
+            }
+            
         }
 
         public Task<IEnumerable<Skin>> GetAvailableSkinsAsync(string skinsDirectoryName)
         {
-            throw new NotImplementedException();
+            try
+            {
+                throw new NotImplementedException();
+            }
+            catch (Exception ex)
+            {
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                throw new NotImplementedException();
+            }
         }
 
         public IEnumerable<string> GetSkinScreenshots(Skin currentSkin)
         {
-            throw new NotImplementedException();
+            try
+            {
+                throw new NotImplementedException();
+            }
+            catch (Exception ex)
+            {
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                throw new NotImplementedException();
+            }
         }
 
         public Task<IEnumerable<string>> GetSkinScreenshotsAsync(Skin currentSkin)
         {
-            throw new NotImplementedException();
+            try
+            {
+                throw new NotImplementedException();
+            }
+            catch (Exception ex)
+            {
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                throw new NotImplementedException();
+            }
         }
     }
 }

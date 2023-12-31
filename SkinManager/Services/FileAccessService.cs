@@ -14,17 +14,14 @@ namespace SkinManager.Services
     /// <summary>
     /// This class facilitates local file system access.
     /// </summary>
-    public class FileAccessService : IFileAccessService
+    public class FileAccessService(IMessenger theMessenger) : IFileAccessService
     {
-        private readonly IMessenger _theMessenger;
-
-        public FileAccessService(IMessenger theMessenger)
-        {
-            _theMessenger = theMessenger;
-        }
+        private readonly IMessenger _theMessenger = theMessenger;
+        private readonly JsonSerializerOptions options = new() { WriteIndented = true };
 
         /// <summary>
         /// Copies all files in a skin folder, including subfolders, to the game folder.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="skinDirectoryName">Directory the skin is located in.</param>
         /// <param name="gameDirectoryName">Directory the game is located in.</param>
@@ -46,8 +43,10 @@ namespace SkinManager.Services
                 _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
             }
         }
+        
         /// <summary>
         /// Copies all files in a skin folder, including subfolders, to the game folder.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="skinDirectoryName">Directory the skin is located in.</param>
         /// <param name="gameDirectoryName">Directory the game is located in.</param>
@@ -76,6 +75,7 @@ namespace SkinManager.Services
         #region Create Methods
         /// <summary>
         /// Creates a folder.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="directoryName">Directory to create.</param>
         private void CreateFolder(string directoryName)
@@ -92,8 +92,10 @@ namespace SkinManager.Services
                 }
             }
         }
+        
         /// <summary>
         /// Creates a folder.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="directoryName">Directory to create.</param>
         private async Task CreateFolderAsync(string directoryName)
@@ -110,8 +112,11 @@ namespace SkinManager.Services
                 }
             }
         }
+        
         /// <summary>
         /// Creates folder structure based on a collection of SkinType.
+        /// Send a OperationErrorMessage if an error occurs.
+        /// Send a DirectoryNotEmptyMessage if the folder is not empty.
         /// </summary>
         /// <param name="skinTypes">Collection of SkinType.</param>
         /// <param name="skinsFolderName">Directory for the structure to be created in.</param>
@@ -147,8 +152,11 @@ namespace SkinManager.Services
 
 
         }
+
         /// <summary>
         /// Creates folder structure based on a collection of SkinType.
+        /// Send a OperationErrorMessage if an error occurs.
+        /// Send a DirectoryNotEmptyMessage if the folder is not empty.
         /// </summary>
         /// <param name="skinTypes">Collection of SkinType.</param>
         /// <param name="skinsFolderName">Directory for the structure to be created in.</param>
@@ -186,8 +194,10 @@ namespace SkinManager.Services
             }
 
         }
+        
         /// <summary>
         /// Copies all files in a game directory, including sub directories, that are in the skin folder, and subdirectories, to the back up folder.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="skinDirectoryName">Directory of the skin.</param>
         /// <param name="backUpDirectoryName">Directory to store the backup.</param>
@@ -196,7 +206,7 @@ namespace SkinManager.Services
         {
             try
             {
-                DirectoryInfo skinDirectory = new DirectoryInfo(skinDirectoryName);
+                DirectoryInfo skinDirectory = new (skinDirectoryName);
                 DirectoryInfo[] subDirs = new DirectoryInfo(skinDirectoryName).GetDirectories("*.*", SearchOption.AllDirectories);
 
                 foreach (DirectoryInfo currentFolder in subDirs)
@@ -217,6 +227,7 @@ namespace SkinManager.Services
         }
         /// <summary>
         /// Copies all files in a game directory, including sub directories, that are in the skin folder, and subdirectories, to the back up folder.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="skinDirectoryName">Directory of the skin.</param>
         /// <param name="backUpDirectoryName">Directory to store the backup.</param>
@@ -225,7 +236,7 @@ namespace SkinManager.Services
         {
             try
             {
-                DirectoryInfo skinDirectory = new DirectoryInfo(skinDirectoryName);
+                DirectoryInfo skinDirectory = new (skinDirectoryName);
                 DirectoryInfo[] subDirs = await Task.Run(() => skinDirectory.GetDirectories("*.*", SearchOption.AllDirectories));
 
                 await Task.Run(async () =>
@@ -251,6 +262,7 @@ namespace SkinManager.Services
         #region Restore Methods
         /// <summary>
         /// Restores backed up game files to the game installation location.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="skinDirectoryName">The back up location.</param>
         /// <param name="gameDirectoryName">The game installation location.</param>
@@ -258,7 +270,7 @@ namespace SkinManager.Services
         {
             try
             {
-                DirectoryInfo skinDirectory = new DirectoryInfo(skinDirectoryName);
+                DirectoryInfo skinDirectory = new (skinDirectoryName);
                 DirectoryInfo[] subDirs = new DirectoryInfo(skinDirectoryName).GetDirectories("*.*", SearchOption.AllDirectories);
 
                 foreach (DirectoryInfo currentFolder in subDirs)
@@ -284,6 +296,7 @@ namespace SkinManager.Services
 
         /// <summary>
         /// Restores backed up game files to the game installation location.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="skinDirectoryName">The back up location.</param>
         /// <param name="gameDirectoryName">The game installation location.</param>
@@ -291,7 +304,7 @@ namespace SkinManager.Services
         {
             try
             {
-                DirectoryInfo skinDirectory = new DirectoryInfo(skinDirectoryName);
+                DirectoryInfo skinDirectory = new (skinDirectoryName);
                 DirectoryInfo[] subDirs = await Task.Run(() => skinDirectory.GetDirectories("*.*", SearchOption.AllDirectories));
 
                 await Task.Run(async () =>
@@ -322,6 +335,7 @@ namespace SkinManager.Services
         #region Get Methods
         /// <summary>
         /// Gets a collection of applied skins locations.
+        /// Send a OperationErrorMessage if an error occurs and returns an empty collection.
         /// </summary>
         /// <param name="appliedSkinsFile">Applied skins file.</param>
         /// <returns>Collection of found applied skins locations.</returns>
@@ -361,7 +375,7 @@ namespace SkinManager.Services
             {
                 if (File.Exists(appliedSkinsFile))
                 {
-                    return JsonSerializer.Deserialize<List<string>>(File.OpenRead(appliedSkinsFile)) ?? new List<string>();
+                    return JsonSerializer.Deserialize<List<string>>(File.OpenRead(appliedSkinsFile)) ?? [];
                 }
                 else
                 {
@@ -379,6 +393,7 @@ namespace SkinManager.Services
 
         /// <summary>
         /// Gets a collecttion of applied skins locations.
+        /// Send a OperationErrorMessage if an error occurs and returns an empty collection.
         /// </summary>
         /// <param name="appliedSkinsFile">Applied skins file.</param>
         /// <returns>Collection of found applied skins locations.</returns>
@@ -386,11 +401,11 @@ namespace SkinManager.Services
         {
             try
             {
-                List<string> appliedSkins = new List<string>();
+                List<string> appliedSkins = [];
                 if (await FileExistsAsync(appliedSkinsFile))
                 {
-                    Stream reader = File.OpenRead(appliedSkinsFile);
-                    appliedSkins = await JsonSerializer.DeserializeAsync<List<string>>(reader) ?? new List<string>();
+                    using Stream reader = File.OpenRead(appliedSkinsFile);
+                    appliedSkins = await JsonSerializer.DeserializeAsync<List<string>>(reader) ?? [];
                     reader.Close();
                 }
                 return new List<string>();
@@ -404,6 +419,7 @@ namespace SkinManager.Services
 
         /// <summary>
         /// Gets a collection of SkinType.
+        /// Send a OperationErrorMessage if an error occurs and returns an empty collection.
         /// </summary>
         /// <param name="subTypesFile">Skin types file.</param>
         /// <returns>Collection of SkinType.</returns>
@@ -450,7 +466,7 @@ namespace SkinManager.Services
             {
                 if (File.Exists(skinTypesFile))
                 {
-                    return JsonSerializer.Deserialize<List<SkinType>>(File.OpenRead(skinTypesFile)) ?? new List<SkinType>();
+                    return JsonSerializer.Deserialize<List<SkinType>>(File.OpenRead(skinTypesFile)) ?? [];
                 }
                 else
                 {
@@ -468,6 +484,7 @@ namespace SkinManager.Services
 
         /// <summary>
         /// Gets a collection of SkinType.
+        /// Send a OperationErrorMessage if an error occurs and returns an empty collection.
         /// </summary>
         /// <param name="subTypesFile">Skin types file.</param>
         /// <returns>Collection of skin types.</returns>
@@ -475,11 +492,11 @@ namespace SkinManager.Services
         {
             try
             {
-                List<SkinType> skinTypes = new List<SkinType>();
+                List<SkinType> skinTypes = [];
                 if (await FileExistsAsync(subTypesFile))
                 {
-                    Stream reader = File.OpenRead(subTypesFile);
-                    skinTypes = await JsonSerializer.DeserializeAsync<List<SkinType>>(reader) ?? new List<SkinType>();
+                    using Stream reader = File.OpenRead(subTypesFile);
+                    skinTypes = await JsonSerializer.DeserializeAsync<List<SkinType>>(reader) ?? [];
                     reader.Close();
                 }
                 return skinTypes;
@@ -495,6 +512,7 @@ namespace SkinManager.Services
         #region Save Methods
         /// <summary>
         /// Saves applied skins to a JSON file.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="appliedSkins">Collection of applied skins locations.</param>
         /// <param name="appliedSkinsFileName">File to save to.</param>
@@ -540,7 +558,7 @@ namespace SkinManager.Services
 
             try
             {
-                JsonSerializer.Serialize(File.OpenWrite(appliedSkinsFileName), appliedSkins, new JsonSerializerOptions() { WriteIndented = true });
+                JsonSerializer.Serialize(File.OpenWrite(appliedSkinsFileName), appliedSkins, options);
             }
             catch (Exception ex)
             {
@@ -548,8 +566,10 @@ namespace SkinManager.Services
             }
 
         }
+        
         /// <summary>
         /// Saves applied skins to a JSON file.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="appliedSkins">Applied skins locations.</param>
         /// <param name="appliedSkinsFileName">File to save to.</param>
@@ -558,7 +578,7 @@ namespace SkinManager.Services
             try
             {
                 using Stream writer = File.OpenWrite(appliedSkinsFileName);
-                await JsonSerializer.SerializeAsync<IEnumerable<string>>(writer, appliedSkins, new JsonSerializerOptions() { WriteIndented = true });
+                await JsonSerializer.SerializeAsync(writer, appliedSkins, options);
                 writer.Close();
             }
             catch (Exception ex)
@@ -566,8 +586,10 @@ namespace SkinManager.Services
                 _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
             }
         }
+        
         /// <summary>
         /// Saves a collection SkinTypes to a JSON file.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="skinTypes">Collection of skin types.</param>
         /// <param name="skinTypesFile">File to save to.</param>
@@ -617,7 +639,7 @@ namespace SkinManager.Services
 
             try
             {
-                JsonSerializer.Serialize(File.OpenWrite(skinTypesFile), skinTypes, new JsonSerializerOptions() { WriteIndented = true });
+                JsonSerializer.Serialize(File.OpenWrite(skinTypesFile), skinTypes, options);
             }
             catch (Exception ex)
             {
@@ -625,8 +647,10 @@ namespace SkinManager.Services
             }
 
         }
+        
         /// <summary>
         /// Saves a collection of SkinType to a JSON file.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="skinTypes">Collection of SkinType.</param>
         /// <param name="skinTypesFile">File to save to.</param>
@@ -635,7 +659,7 @@ namespace SkinManager.Services
             try
             {
                 using Stream writer = File.OpenWrite(skinTypesFile);
-                await JsonSerializer.SerializeAsync(writer, skinTypes, new JsonSerializerOptions() { WriteIndented = true });
+                await JsonSerializer.SerializeAsync(writer, skinTypes, options);
                 writer.Close();
             }
             catch (Exception ex)
@@ -648,6 +672,7 @@ namespace SkinManager.Services
         #region Exists Methods
         /// <summary>
         /// Checks if a file exists.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="fileName">File name.</param>
         /// <returns>If the file exists.</returns>
@@ -667,6 +692,7 @@ namespace SkinManager.Services
 
         /// <summary>
         /// Checks if a directory exists.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="directoryName">Directory name.</param>
         /// <returns>If the directory exists.</returns>
@@ -687,32 +713,41 @@ namespace SkinManager.Services
         #region Start Game Methods
         /// <summary>
         /// Starts the game.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="fileLocation">Game executable location.</param>
         public void StartGame(string fileLocation)
         {
             if (File.Exists(fileLocation))
             {
-                ProcessStartInfo psInfo = new ProcessStartInfo()
+                ProcessStartInfo psInfo = new()
                 {
                     FileName = Path.Combine(fileLocation),
                     Verb = "runas",
                     UseShellExecute = true
                 };
 
-                Process.Start(psInfo);
+                try
+                {
+                    Process.Start(psInfo);
+                }
+                catch (Exception ex)
+                {
+                    _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                }
             }
         }
 
         /// <summary>
         /// Starts the game.
+        /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="fileLocation">Game executable location.</param>
         public async Task StartGameAsync(string fileLocation)
         {
             if (await FileExistsAsync(fileLocation))
             {
-                ProcessStartInfo psInfo = new ProcessStartInfo()
+                ProcessStartInfo psInfo = new()
                 {
                     FileName = Path.Combine(fileLocation),
                     Verb = "runas",
@@ -737,7 +772,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="directoryPath"></param>
         /// <returns>if the directory is empty.</returns>
-        private bool IsEmptyDirectory(string directoryPath)
+        private static bool IsEmptyDirectory(string directoryPath)
         {
             return !Directory.EnumerateFileSystemEntries(directoryPath).Any();
         }
@@ -746,7 +781,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="directoryPath"></param>
         /// <returns>if the directory is empty.</returns>
-        private async Task<bool> IsEmptyDirectoryAsync(string directoryPath)
+        private static async Task<bool> IsEmptyDirectoryAsync(string directoryPath)
         {
             return await Task.Run(() => !Directory.EnumerateFileSystemEntries(directoryPath).Any());
         }
@@ -758,7 +793,7 @@ namespace SkinManager.Services
         /// <returns>The default collection of SkinType</returns>
         private IEnumerable<SkinType> PopulateDefaultStructure()
         {
-            List<SkinType> skinTypes = new List<SkinType>();
+            List<SkinType> skinTypes = [];
             skinTypes.Add(new SkinType("Area", new List<string>() { "Forest" }));
             skinTypes.Add(new SkinType("Armor", new List<string>() { "Arm" }));
             skinTypes.Add(new SkinType("Box", new List<string>() { "All" }));

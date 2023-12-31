@@ -79,14 +79,14 @@ namespace SkinManager
             services.AddSingleton<StrongReferenceMessenger>();
             services.AddSingleton<IMessenger, StrongReferenceMessenger>(provider => provider.GetRequiredService<StrongReferenceMessenger>());
 
-            services.AddTransient<AddGameView>();
-            services.AddTransient<AddGameViewModel>();
+            services.AddScoped<AddGameView>();
+            services.AddScoped<AddGameViewModel>();
 
-            services.AddTransient<MessageBoxView>();
-            services.AddTransient<MessageBoxViewModel>();
+            services.AddScoped<MessageBoxView>();
+            services.AddScoped<MessageBoxViewModel>();
 
-            services.AddTransient<ErrorMessageBoxView>();
-            services.AddTransient<ErrorMessageBoxViewModel>();
+            services.AddScoped<ErrorMessageBoxView>();
+            services.AddScoped<ErrorMessageBoxViewModel>();
         });
     }
 }

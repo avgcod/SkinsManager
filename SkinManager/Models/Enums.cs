@@ -6,6 +6,12 @@ using System.Threading.Tasks;
 
 namespace SkinManager.Models
 {
+    public enum BrowseType
+    {
+        Executable,
+        Install, 
+        Skins
+    }
     public enum SkinsSource
     {
         Local,

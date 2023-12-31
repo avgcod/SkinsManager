@@ -13,28 +13,18 @@ namespace SkinManager.Services;
 /// <summary>
 /// This class provides access to files on the local file system.
 /// </summary>
-public class LocalSkinsAccessService : ISkinsAccessService
+public class LocalSkinsAccessService(IMessenger theMessenger) : ISkinsAccessService
 {
-    private readonly IMessenger _theMessenger;
+    private readonly IMessenger _theMessenger = theMessenger;
 
-    public LocalSkinsAccessService(IMessenger theMessenger)
-    {
-        _theMessenger = theMessenger;
-    }
-
-    /// <summary>
-    /// Gets a list of available skins.
-    /// </summary>
-    /// <param name="skinsFolder">Location of skins.</param>
-    /// <returns>List of available skins.</returns>
     public IEnumerable<Skin> GetAvailableSkins(string skinsFolder)
     {
         try
         {
-            List<Skin> skins = new List<Skin>();
+            List<Skin> skins = [];
             if (Directory.Exists(skinsFolder))
             {
-                DirectoryInfo rootDirectory = new DirectoryInfo(skinsFolder);
+                DirectoryInfo rootDirectory = new (skinsFolder);
                 foreach (DirectoryInfo skinTypeDirectory in rootDirectory.GetDirectories())
                 {
                     foreach (DirectoryInfo subTypeDirectory in skinTypeDirectory.GetDirectories())
@@ -51,8 +41,8 @@ public class LocalSkinsAccessService : ISkinsAccessService
                                     skinDirectory.FullName,
                                     string.Empty,
                                     string.Empty,
-                                    skinDirectory.CreationTime,
-                                    skinDirectory.CreationTime));
+                                    DateOnly.FromDateTime(skinDirectory.CreationTime),
+                                    DateOnly.FromDateTime(skinDirectory.CreationTime)));
                             }
                         }
                     }
@@ -67,19 +57,14 @@ public class LocalSkinsAccessService : ISkinsAccessService
         }
     }
 
-    /// <summary>
-    /// Gets a list of available skins.
-    /// </summary>
-    /// <param name="skinsFolder">Location of skins.</param>
-    /// <returns>List of available skins.</returns>
     public async Task<IEnumerable<Skin>> GetAvailableSkinsAsync(string skinsFolder)
     {
         try
         {
-            List<Skin> skins = new List<Skin>();
+            List<Skin> skins = [];
             if (await DirectoryExistsAsync(skinsFolder))
             {
-                DirectoryInfo rootDirectory = new DirectoryInfo(skinsFolder);
+                DirectoryInfo rootDirectory = new (skinsFolder);
                 await Task.Run(() =>
                 {
                     foreach (DirectoryInfo skinTypeDirectory in rootDirectory.GetDirectories())
@@ -98,8 +83,8 @@ public class LocalSkinsAccessService : ISkinsAccessService
                                         skinDirectory.FullName,
                                         string.Empty,
                                         string.Empty,
-                                        skinDirectory.CreationTime,
-                                        skinDirectory.CreationTime));
+                                        DateOnly.FromDateTime(skinDirectory.CreationTime),
+                                        DateOnly.FromDateTime(skinDirectory.CreationTime)));
                                 }
                             }
                         }
@@ -133,21 +118,11 @@ public class LocalSkinsAccessService : ISkinsAccessService
         }
     }
 
-    /// <summary>
-    /// Gets screenshots for a skin.
-    /// </summary>
-    /// <param name="currentSkin">the skins to get the screenshots for.</param>
-    /// <returns>Collection of screenshot locations</returns>
     public IEnumerable<string> GetSkinScreenshots(Skin currentSkin)
     {
         throw new NotImplementedException();
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="currentSkin"></param>
-    /// <returns>Collection of screenshot locations.</returns>
     public Task<IEnumerable<string>> GetSkinScreenshotsAsync(Skin currentSkin)
     {
         throw new NotImplementedException();

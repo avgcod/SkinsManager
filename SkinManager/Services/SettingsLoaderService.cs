@@ -11,14 +11,10 @@ namespace SkinManager.Services
     /// <summary>
     /// This class facilitates loading and saving settings information to the local file system.
     /// </summary>
-    public class SettingsLoaderService : ISettingsLoaderService
+    public class SettingsLoaderService(IMessenger theMessenger) : ISettingsLoaderService
     {
-        private readonly IMessenger _theMessenger;
-
-        public SettingsLoaderService(IMessenger theMessenger)
-        {
-            _theMessenger = theMessenger;
-        }
+        private readonly IMessenger _theMessenger = theMessenger;
+        private readonly JsonSerializerOptions options = new() { WriteIndented = true };
 
         /// <summary>
         /// Loads a collection of GameInfo from a JSON file.
@@ -72,11 +68,11 @@ namespace SkinManager.Services
         {
             try
             {
-                List<GameInfo> theGameInfo = new List<GameInfo>();
+                List<GameInfo> theGameInfo = [];
                 if (File.Exists(gameInfoFileName))
                 {
                     Stream reader = File.OpenRead(gameInfoFileName);
-                    theGameInfo = await JsonSerializer.DeserializeAsync<List<GameInfo>>(reader) ?? new List<GameInfo>();
+                    theGameInfo = await JsonSerializer.DeserializeAsync<List<GameInfo>>(reader) ?? [];
                     reader.Close();
                 }
                 return theGameInfo;
@@ -97,7 +93,7 @@ namespace SkinManager.Services
         {
             try
             {
-                JsonSerializer.Serialize(File.OpenWrite(gameInfoFileName), gameInfo, new JsonSerializerOptions() { WriteIndented = true });
+                JsonSerializer.Serialize(File.OpenWrite(gameInfoFileName), gameInfo, options);
             }
             catch (Exception ex)
             {
@@ -115,7 +111,7 @@ namespace SkinManager.Services
             try
             {
                 using Stream writer = File.OpenWrite(gameInfoFileName);
-                await JsonSerializer.SerializeAsync(writer, gameInfo, new JsonSerializerOptions() { WriteIndented = true });
+                await JsonSerializer.SerializeAsync(writer, gameInfo, options);
                 writer.Close();
             }
             catch (Exception ex)
@@ -176,11 +172,11 @@ namespace SkinManager.Services
         {
             try
             {
-                List<KnownGameInfo> theKnownGameInfo = new List<KnownGameInfo>();
+                List<KnownGameInfo> theKnownGameInfo = [];
                 if (await FileExistsAsync(knownGameInfoFileName))
                 {
                     Stream reader = File.OpenRead(knownGameInfoFileName);
-                    theKnownGameInfo = await JsonSerializer.DeserializeAsync<List<KnownGameInfo>>(reader) ?? new List<KnownGameInfo>();
+                    theKnownGameInfo = await JsonSerializer.DeserializeAsync<List<KnownGameInfo>>(reader) ?? [];
                     reader.Close();
                 }
                 return theKnownGameInfo;
@@ -202,7 +198,7 @@ namespace SkinManager.Services
             try
             {
                 using Stream writer = File.OpenWrite(fileName);
-                await JsonSerializer.SerializeAsync(writer, knownGamesList, new JsonSerializerOptions() { WriteIndented = true });
+                await JsonSerializer.SerializeAsync(writer, knownGamesList, options);
                 writer.Close();
             }
             catch (Exception ex)

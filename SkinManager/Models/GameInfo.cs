@@ -14,6 +14,6 @@ namespace SkinManager.Models
         [ObservableProperty]
         public string _gameExecutable = string.Empty;
         [ObservableProperty]
-        public List<string> _appliedSkins  = new List<string>();
+        public List<string> _appliedSkins  = [];
     }
 }
