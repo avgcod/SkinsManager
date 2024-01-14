@@ -5,12 +5,10 @@ using System.Linq;
 
 namespace SkinManager.Models
 {
-    public partial class SkinType : ObservableObject
+    public class SkinType
     {
-        [ObservableProperty]
-        public string _name  = string.Empty;
-        [ObservableProperty]
-        public List<string> _subTypes  = [];
+        public string Name { get; set; } = string.Empty;
+        public List<string> SubTypes { get; set; } = [];
         public DateOnly LastOnlineCheck { get; set; } = DateOnly.FromDateTime(DateTime.Now.AddDays(-7));
     }
 }

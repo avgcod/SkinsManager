@@ -2,10 +2,8 @@
 using SkinManager.Models;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace SkinManager.Services;
@@ -35,7 +33,7 @@ public class LocalSkinsAccessService(IMessenger theMessenger)
                             {
                                 foreach (DirectoryInfo skinDirectory in subTypeDirectory.GetDirectories())
                                 {
-                                    Skin tempSkin = new Skin()
+                                    Skin tempSkin = new()
                                     {
                                         Name = skinDirectory.Name,
                                         CreationDate = DateOnly.FromDateTime(skinDirectory.CreationTime),
@@ -59,10 +57,7 @@ public class LocalSkinsAccessService(IMessenger theMessenger)
                                     string screenshotsFolder = Path.Combine(subTypeDirectory.FullName, "Screenshots");
                                     if (Directory.Exists(screenshotsFolder))
                                     {
-                                        foreach (string screenshotLocation in new DirectoryInfo(screenshotsFolder).GetFiles().Select(x => x.FullName))
-                                        {
-                                            tempSkin.Screenshots.Add(screenshotLocation);
-                                        }
+                                        tempSkin.Screenshots.AddRange(new DirectoryInfo(screenshotsFolder).GetFiles().Select(x => x.FullName));
                                     }
 
                                     skins.Add(tempSkin);
@@ -98,5 +93,4 @@ public class LocalSkinsAccessService(IMessenger theMessenger)
             return false;
         }
     }
-
 }

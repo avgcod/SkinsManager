@@ -10,13 +10,15 @@ using System.Threading.Tasks;
 
 namespace SkinManager.Services
 {
-    public static class ImageHelper
+    //Copied from https://docs.avaloniaui.net/ru/docs/guides/data-binding/how-to-bind-image-files
+    public static class ImageHelperService
     {
         public static Bitmap LoadFromResource(Uri resourceUri)
         {
             return new Bitmap(AssetLoader.Open(resourceUri));
         }
 
+        //TODO: Send the error information through the messenger.
         public static async Task<Bitmap?> LoadFromWeb(Uri url)
         {
             using var httpClient = new HttpClient();

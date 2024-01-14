@@ -1,30 +1,35 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:vm="using:SkinManager.ViewModels"
-        mc:Ignorable="d" d:DesignWidth="180" d:DesignHeight="70"
-        Width="180" Height="70"
-        MinWidth="180" MinHeight="70"
-        x:Class="SkinManager.Views.MessageBoxView"
-        x:DataType="vm:MessageBoxViewModel"
-        Title="Notice"
-        WindowStartupLocation="CenterOwner"
-        SystemDecorations="BorderOnly">
+<Window
+    x:Class="SkinManager.Views.MessageBoxView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:SkinManager.ViewModels"
+    Title="Notice"
+    Width="180"
+    Height="70"
+    MinWidth="180"
+    MinHeight="70"
+    x:DataType="vm:MessageBoxViewModel"
+    SystemDecorations="BorderOnly"
+    WindowStartupLocation="CenterOwner"
+    mc:Ignorable="d">
 
-  <StackPanel Orientation="Vertical"
-              Spacing="10"
-              Margin="5">
+    <StackPanel
+        Margin="5"
+        Orientation="Vertical"
+        Spacing="10">
 
-    <TextBlock Text="{Binding MessageText}" HorizontalAlignment="Center"/>
+        <TextBlock HorizontalAlignment="Center" Text="{Binding MessageText}" />
 
-    <Button Content="OK"
-            HorizontalContentAlignment="Center"
-            HorizontalAlignment="Center"
-            Command="{Binding OKCommand}"
-            Margin="0 0 5 0"
+        <Button
+            x:Name="btnOk"
             Width="50"
-            x:Name="btnOk"/>
+            Margin="0,0,5,0"
+            HorizontalAlignment="Center"
+            HorizontalContentAlignment="Center"
+            Command="{Binding OKCommand}"
+            Content="OK" />
 
-  </StackPanel>
+    </StackPanel>
 </Window>

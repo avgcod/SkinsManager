@@ -5,8 +5,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 
@@ -43,7 +41,7 @@ namespace SkinManager.Services
                 _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
             }
         }
-        
+
         /// <summary>
         /// Copies all files in a skin folder, including subfolders, to the game folder.
         /// Send a OperationErrorMessage if an error occurs.
@@ -92,7 +90,7 @@ namespace SkinManager.Services
                 }
             }
         }
-        
+
         /// <summary>
         /// Creates a folder.
         /// Send a OperationErrorMessage if an error occurs.
@@ -112,7 +110,7 @@ namespace SkinManager.Services
                 }
             }
         }
-        
+
         /// <summary>
         /// Creates folder structure based on a collection of SkinType.
         /// Send a OperationErrorMessage if an error occurs.
@@ -145,8 +143,6 @@ namespace SkinManager.Services
             {
                 _theMessenger.Send<DirectoryNotEmptyMessage>(new DirectoryNotEmptyMessage(skinsFolderName));
             }
-
-
         }
 
         /// <summary>
@@ -184,9 +180,8 @@ namespace SkinManager.Services
             {
                 _theMessenger.Send<DirectoryNotEmptyMessage>(new DirectoryNotEmptyMessage(skinsFolderName));
             }
-
         }
-        
+
         /// <summary>
         /// Copies all files in a game directory, including sub directories, that are in the skin folder, and subdirectories, to the back up folder.
         /// Send a OperationErrorMessage if an error occurs.
@@ -198,7 +193,7 @@ namespace SkinManager.Services
         {
             try
             {
-                DirectoryInfo skinDirectory = new (skinDirectoryName);
+                DirectoryInfo skinDirectory = new(skinDirectoryName);
                 DirectoryInfo[] subDirs = new DirectoryInfo(skinDirectoryName).GetDirectories("*.*", SearchOption.AllDirectories);
 
                 foreach (DirectoryInfo currentFolder in subDirs)
@@ -209,7 +204,6 @@ namespace SkinManager.Services
                         File.Copy(gameDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name,
                             backUpDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name, false);
                     }
-
                 }
             }
             catch (Exception ex)
@@ -228,7 +222,7 @@ namespace SkinManager.Services
         {
             try
             {
-                DirectoryInfo skinDirectory = new (skinDirectoryName);
+                DirectoryInfo skinDirectory = new(skinDirectoryName);
                 DirectoryInfo[] subDirs = await Task.Run(() => skinDirectory.GetDirectories("*.*", SearchOption.AllDirectories));
 
                 await Task.Run(async () =>
@@ -251,7 +245,6 @@ namespace SkinManager.Services
         }
         #endregion
 
-        #region Restore Methods
         /// <summary>
         /// Restores backed up game files to the game installation location.
         /// Send a OperationErrorMessage if an error occurs.
@@ -262,7 +255,7 @@ namespace SkinManager.Services
         {
             try
             {
-                DirectoryInfo skinDirectory = new (skinDirectoryName);
+                DirectoryInfo skinDirectory = new(skinDirectoryName);
                 DirectoryInfo[] subDirs = new DirectoryInfo(skinDirectoryName).GetDirectories("*.*", SearchOption.AllDirectories);
 
                 foreach (DirectoryInfo currentFolder in subDirs)
@@ -298,7 +291,7 @@ namespace SkinManager.Services
         {
             try
             {
-                DirectoryInfo skinDirectory = new (skinDirectoryName);
+                DirectoryInfo skinDirectory = new(skinDirectoryName);
                 DirectoryInfo[] subDirs = await Task.Run(() => skinDirectory.GetDirectories("*.*", SearchOption.AllDirectories));
 
                 await Task.Run(async () =>
@@ -325,13 +318,8 @@ namespace SkinManager.Services
                 _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
                 return false;
             }
-
         }
-        #endregion
-
-        #region Get Methods
-
-        public Dictionary<string, List<Skin>> GetCachedWebSkins(IEnumerable<string> gameNames)
+        public Dictionary<string, List<Skin>> LoadCachedWebSkins(IEnumerable<string> gameNames)
         {
             Dictionary<string, List<Skin>> gameWebSkins = [];
             try
@@ -357,345 +345,6 @@ namespace SkinManager.Services
         }
 
         /// <summary>
-        /// Gets a collection of applied skins locations.
-        /// Send a OperationErrorMessage if an error occurs and returns an empty collection.
-        /// </summary>
-        /// <param name="appliedSkinsFile">Applied skins file.</param>
-        /// <returns>Collection of found applied skins locations.</returns>
-        //public IEnumerable<string> GetAppliedSkins(string appliedSkinsFile)
-        //{
-        //    /*
-        //     * List<Skin> appliedSkins = new List<Skin>();
-        //    if (File.Exists(appliedSkinsFile))
-        //    {
-        //        using (XmlReader theReader = XmlReader.Create(appliedSkinsFile))
-        //        {
-        //            Skin appliedSkin;
-        //            SkinType skinType = new SkinType(string.Empty, new List<string>());
-        //            string skinName = string.Empty;
-        //            string skinSubType = string.Empty;
-
-        //            while (theReader.ReadToFollowing("AppliedSkin"))
-        //            {
-        //                theReader.ReadToFollowing("Name");
-        //                skinName = theReader.ReadElementContentAsString("Name", "");
-
-        //                theReader.ReadToFollowing("Type");
-        //                skinType = new SkinType(theReader.ReadElementContentAsString("Type", ""), new List<string>());
-
-        //                theReader.ReadToFollowing("SubType");
-        //                skinSubType = theReader.ReadElementContentAsString("SubType", "");
-
-        //                appliedSkin = new Skin(skinType, skinSubType, skinName, string.Empty, string.Empty, string.Empty,
-        //                    DateTime.Now, DateTime.Now);
-
-        //                appliedSkins.Add(appliedSkin);
-        //            }
-        //        }
-        //    }
-        //     */
-        //    try
-        //    {
-        //        if (File.Exists(appliedSkinsFile))
-        //        {
-        //            using Stream fileStream = File.OpenRead("testXML.xml");
-        //            gameInfo = (List<KnownGameInfo>)theSerializer.Deserialize(fileStream) ?? [];
-        //            return JsonSerializer.Deserialize<List<string>>(File.OpenRead(appliedSkinsFile)) ?? [];
-        //        }
-        //        else
-        //        {
-        //            return new List<string>();
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-        //        return new List<string>();
-        //    }
-
-
-        //}
-
-        /// <summary>
-        /// Gets a collecttion of applied skins locations.
-        /// Send a OperationErrorMessage if an error occurs and returns an empty collection.
-        /// </summary>
-        /// <param name="appliedSkinsFile">Applied skins file.</param>
-        /// <returns>Collection of found applied skins locations.</returns>
-        //public async Task<IEnumerable<string>> GetAppliedSkinsAsync(string appliedSkinsFile)
-        //{
-        //    try
-        //    {
-        //        List<string> appliedSkins = [];
-        //        if (await FileExistsAsync(appliedSkinsFile))
-        //        {
-        //            using Stream reader = File.OpenRead(appliedSkinsFile);
-        //            appliedSkins = await JsonSerializer.DeserializeAsync<List<string>>(reader) ?? [];
-        //            reader.Close();
-        //        }
-        //        return new List<string>();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-        //        return new List<string>();
-        //    }
-        //}
-
-        /// <summary>
-        /// Gets a collection of SkinType.
-        /// Send a OperationErrorMessage if an error occurs and returns an empty collection.
-        /// </summary>
-        /// <param name="subTypesFile">Skin types file.</param>
-        /// <returns>Collection of SkinType.</returns>
-        //public IEnumerable<SkinType> GetSkinTypes(string skinTypesFile)
-        //{
-        //    /*
-        //     * List<SkinType> skinTypes = new List<SkinType>();
-
-        //    if (File.Exists(subTypesFile))
-        //    {
-        //        using (XmlReader theReader = XmlReader.Create(subTypesFile))
-        //        {
-        //            SkinType skinType;
-        //            List<string> subTypes;
-        //            string skinTypeName;
-
-        //            while (theReader.ReadToFollowing("SkinType"))
-        //            {
-        //                theReader.ReadToFollowing("Name");
-        //                skinTypeName = theReader.ReadElementContentAsString("Name", "");
-
-        //                subTypes = new List<string>();
-        //                theReader.ReadToFollowing("SubTypeName");
-        //                do
-        //                {
-        //                    subTypes.Add(theReader.ReadElementContentAsString("SubTypeName", ""));
-
-        //                } while (theReader.ReadToNextSibling("SubTypeName"));
-
-        //                skinType = new SkinType(skinTypeName, subTypes);
-
-        //                skinTypes.Add(skinType);
-        //            }
-        //        }
-        //    }
-        //    else
-        //    {
-        //        skinTypes = PopulateSkins().ToList();
-        //    }
-
-        //    return skinTypes;
-        //     */
-        //    try
-        //    {
-        //        if (File.Exists(skinTypesFile))
-        //        {
-        //            return JsonSerializer.Deserialize<List<SkinType>>(File.OpenRead(skinTypesFile)) ?? [];
-        //        }
-        //        else
-        //        {
-        //            return new List<SkinType>();
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-        //        return new List<SkinType>();
-        //    }
-
-
-        //}
-
-        /// <summary>
-        /// Gets a collection of SkinType.
-        /// Send a OperationErrorMessage if an error occurs and returns an empty collection.
-        /// </summary>
-        /// <param name="subTypesFile">Skin types file.</param>
-        /// <returns>Collection of skin types.</returns>
-        //public async Task<IEnumerable<SkinType>> GetSkinTypesAsync(string subTypesFile)
-        //{
-        //    try
-        //    {
-        //        List<SkinType> skinTypes = [];
-        //        if (await FileExistsAsync(subTypesFile))
-        //        {
-        //            using Stream reader = File.OpenRead(subTypesFile);
-        //            skinTypes = await JsonSerializer.DeserializeAsync<List<SkinType>>(reader) ?? [];
-        //            reader.Close();
-        //        }
-        //        return skinTypes;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-        //        return new List<SkinType>();
-        //    }
-        //}
-        #endregion
-
-        #region Save Methods
-        /// <summary>
-        /// Saves applied skins to a JSON file.
-        /// Send a OperationErrorMessage if an error occurs.
-        /// </summary>
-        /// <param name="appliedSkins">Collection of applied skins locations.</param>
-        /// <param name="appliedSkinsFileName">File to save to.</param>
-        //public void SaveAppliedSkins(IEnumerable<string> appliedSkins, string appliedSkinsFileName)
-        //{
-        //    /*
-        //     * try
-        //    {
-        //        XmlWriterSettings settings = new XmlWriterSettings();
-        //        settings.Indent = true;
-        //        using (XmlWriter writer = XmlWriter.Create(appliedSkinsFileName, settings))
-        //        {
-        //            writer.WriteStartElement("AppliedSkins");
-
-        //            foreach (Skin theSkin in appliedSkins)
-        //            {
-        //                writer.WriteStartElement("AppliedSkin");
-
-        //                writer.WriteStartElement("Name");
-        //                writer.WriteString(theSkin.Name);
-        //                writer.WriteEndElement();
-
-        //                writer.WriteStartElement("Type");
-        //                writer.WriteString(theSkin.SkinType.Name);
-        //                writer.WriteEndElement();
-
-        //                writer.WriteStartElement("SubType");
-        //                writer.WriteString(theSkin.SubType);
-        //                writer.WriteEndElement();
-
-        //                writer.WriteEndElement();
-        //            }
-        //            writer.WriteEndElement();
-        //        }
-
-        //        return true;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        throw new Exception(ex.Message);
-        //    }
-        //     */
-
-        //    try
-        //    {
-        //        JsonSerializer.Serialize(File.OpenWrite(appliedSkinsFileName), appliedSkins, options);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-        //    }
-
-        //}
-
-        /// <summary>
-        /// Saves applied skins to a JSON file.
-        /// Send a OperationErrorMessage if an error occurs.
-        /// </summary>
-        /// <param name="appliedSkins">Applied skins locations.</param>
-        /// <param name="appliedSkinsFileName">File to save to.</param>
-        //public async Task SaveAppliedSkinsAsync(IEnumerable<string> appliedSkins, string appliedSkinsFileName)
-        //{
-        //    try
-        //    {
-        //        using Stream writer = File.OpenWrite(appliedSkinsFileName);
-        //        await JsonSerializer.SerializeAsync(writer, appliedSkins, options);
-        //        writer.Close();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-        //    }
-        //}
-
-        /// <summary>
-        /// Saves a collection SkinTypes to a JSON file.
-        /// Send a OperationErrorMessage if an error occurs.
-        /// </summary>
-        /// <param name="skinTypes">Collection of skin types.</param>
-        /// <param name="skinTypesFile">File to save to.</param>
-        //public void SaveSkinTypes(IEnumerable<SkinType> skinTypes, string skinTypesFile)
-        //{
-        //    /*
-        //     * try
-        //    {
-        //        XmlWriterSettings settings = new XmlWriterSettings();
-        //        settings.Indent = true;
-        //        using (XmlWriter writer = XmlWriter.Create(skinTypesFile, settings))
-        //        {
-        //            writer.WriteStartElement("SkinTypes");
-
-        //            foreach (SkinType skinType in skinTypes)
-        //            {
-        //                writer.WriteStartElement("SkinType");
-
-        //                writer.WriteStartElement("Name");
-        //                writer.WriteString(skinType.Name);
-        //                writer.WriteEndElement();
-
-        //                writer.WriteStartElement("SubTypes");
-        //                foreach (string subType in skinType.SubTypes)
-        //                {
-        //                    writer.WriteStartElement("SubTypeName");
-        //                    writer.WriteString(subType);
-        //                    writer.WriteEndElement();
-        //                }
-        //                writer.WriteEndElement();
-
-        //                writer.WriteEndElement();
-        //            }
-
-        //            writer.WriteEndElement();
-
-        //            writer.Close();
-        //            return true;
-        //        }
-
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        throw new Exception(ex.Message);
-        //    }
-        //     */
-
-        //    try
-        //    {
-        //        JsonSerializer.Serialize(File.OpenWrite(skinTypesFile), skinTypes, options);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-        //    }
-
-        //}
-
-        /// <summary>
-        /// Saves a collection of SkinType to a JSON file.
-        /// Send a OperationErrorMessage if an error occurs.
-        /// </summary>
-        /// <param name="skinTypes">Collection of SkinType.</param>
-        /// <param name="skinTypesFile">File to save to.</param>
-        //public async Task SaveSkinTypesAsync(IEnumerable<SkinType> skinTypes, string skinTypesFile)
-        //{
-        //    try
-        //    {
-        //        using Stream writer = File.OpenWrite(skinTypesFile);
-        //        await JsonSerializer.SerializeAsync(writer, skinTypes, options);
-        //        writer.Close();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-        //    }
-        //}
-        #endregion
-
-        #region Exists Methods
-        /// <summary>
         /// Checks if a file exists.
         /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
@@ -712,7 +361,6 @@ namespace SkinManager.Services
                 _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
                 return false;
             }
-
         }
 
         /// <summary>
@@ -733,9 +381,7 @@ namespace SkinManager.Services
                 return false;
             }
         }
-        #endregion
 
-        #region Start Game Methods
         /// <summary>
         /// Starts the game.
         /// Send a OperationErrorMessage if an error occurs.
@@ -789,9 +435,7 @@ namespace SkinManager.Services
                 }
             }
         }
-        #endregion
 
-        #region IsEmpty Methods
         /// <summary>
         /// Checks if a directory is empty.
         /// </summary>
@@ -810,6 +454,177 @@ namespace SkinManager.Services
         {
             return await Task.Run(() => !Directory.EnumerateFileSystemEntries(directoryPath).Any());
         }
-        #endregion
+
+        /// <summary>
+        /// Loads a collection of GameInfo from a file.
+        /// </summary>
+        /// <param name="gameInfoFileName">File to load.</param>
+        /// <returns>Collection of GameInfo.</returns>
+        public IEnumerable<GameInfo> LoadGameInfo(string gameInfoFileName)
+        {
+            /*
+             * List<string> directories = new List<string>();
+            if (File.Exists(directoriesFile))
+            {
+                using (XmlReader theReader = XmlReader.Create(directoriesFile))
+                {
+                    string directoryLocation = string.Empty;
+
+                    theReader.ReadToFollowing("SkinsLocation");
+                    directoryLocation = theReader.ReadElementContentAsString("SkinsLocation", "");
+                    directories.Add(directoryLocation);
+
+                    theReader.ReadToFollowing("InstallLocation");
+                    directoryLocation = theReader.ReadElementContentAsString("InstallLocation", "");
+                    directories.Add(directoryLocation);
+                }
+            }
+            return directories;
+             */
+            try
+            {
+                if (File.Exists(gameInfoFileName))
+                {
+                    using Stream fileStream = File.OpenRead(gameInfoFileName);
+                    XmlSerializer theSerializer = new(typeof(List<GameInfo>));
+                    return theSerializer.Deserialize(File.OpenRead(gameInfoFileName)) as List<GameInfo> ?? [];
+                }
+                else
+                {
+                    return [];
+                }
+            }
+            catch (Exception ex)
+            {
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                return [];
+            }
+        }
+        /// <summary>
+        /// Saves a collection of GameInfo to a file.
+        /// </summary>
+        /// <param name="gameInfo">Collection of GameInfo to save.</param>
+        /// <param name="gameInfoFileName">File to save to.</param>
+        public void SaveGameInfo(IEnumerable<GameInfo> gameInfo, string gameInfoFileName)
+        {
+            try
+            {
+                XmlSerializer theSerializer = new(gameInfo.GetType());
+                using TextWriter writer = new StreamWriter(gameInfoFileName);
+                theSerializer.Serialize(writer, gameInfo);
+                writer.Close();
+            }
+            catch (Exception ex)
+            {
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+            }
+        }
+        /// <summary>
+        /// Loads the KnownGameInfo to prepopulate skin type and web skins resource.
+        /// </summary>
+        /// <param name="knownGameInfoFileName">File of the known game info.</param>
+        /// <returns>Collection of KnownGameInfo.</returns>
+        public IEnumerable<KnownGameInfo> LoadKnownGamesInfo(string knownGameInfoFileName)
+        {
+            /*
+             * List<string> directories = new List<string>();
+            if (File.Exists(directoriesFile))
+            {
+                using (XmlReader theReader = XmlReader.Create(directoriesFile))
+                {
+                    string directoryLocation = string.Empty;
+
+                    theReader.ReadToFollowing("SkinsLocation");
+                    directoryLocation = theReader.ReadElementContentAsString("SkinsLocation", "");
+                    directories.Add(directoryLocation);
+
+                    theReader.ReadToFollowing("InstallLocation");
+                    directoryLocation = theReader.ReadElementContentAsString("InstallLocation", "");
+                    directories.Add(directoryLocation);
+                }
+            }
+            return directories;
+             */
+            try
+            {
+                if (File.Exists(knownGameInfoFileName))
+                {
+                    using Stream fileStream = File.OpenRead(knownGameInfoFileName);
+                    XmlSerializer theSerializer = new(typeof(List<KnownGameInfo>));
+                    return theSerializer.Deserialize(File.OpenRead(knownGameInfoFileName)) as List<KnownGameInfo> ?? [];
+                }
+                else
+                {
+                    return [];
+                }
+            }
+            catch (Exception ex)
+            {
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                return [];
+            }
+        }
+        /// <summary>
+        /// Saves a collection of KnownGameInfo to a file.
+        /// </summary>
+        /// <param name="knownGamesList">The collection of KnownGameInfo.</param>
+        /// <param name="fileName">File to save to.</param>
+        public void SaveKnownGamesList(IEnumerable<KnownGameInfo> knownGamesList, string fileName)
+        {
+            try
+            {
+                XmlSerializer theSerializer = new(knownGamesList.GetType());
+                using TextWriter writer = new StreamWriter(fileName);
+                theSerializer.Serialize(writer, knownGamesList);
+                writer.Close();
+            }
+            catch (Exception ex)
+            {
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+            }
+        }
+
+        public Dictionary<string, List<Skin>> LoadWebSkins(IEnumerable<string> gameNames)
+        {
+            Dictionary<string, List<Skin>> gameWebSkins = [];
+            try
+            {
+                foreach (string gameName in gameNames)
+                {
+                    string fileName = gameName + " Skins.xml";
+                    if (File.Exists(fileName))
+                    {
+                        using Stream fileStream = File.OpenRead(fileName);
+                        XmlSerializer theSerializer = new(typeof(List<Skin>));
+                        List<Skin> foundSkins = theSerializer.Deserialize(fileStream) as List<Skin> ?? [];
+                        gameWebSkins.Add(gameName, foundSkins);
+                    }
+                }
+                return gameWebSkins;
+            }
+            catch (Exception ex)
+            {
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                return [];
+            }
+        }
+
+        public void SaveWebSkinsList(Dictionary<string, List<Skin>> webSkins)
+        {
+            try
+            {
+                foreach (string currentGameName in webSkins.Keys)
+                {
+                    XmlSerializer theSerializer = new(webSkins[currentGameName].GetType());
+                    using TextWriter writer = new StreamWriter($"{currentGameName} Skins.xml");
+                    theSerializer.Serialize(writer, webSkins[currentGameName]);
+                    writer.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+            }
+        }
     }
 }

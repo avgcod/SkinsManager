@@ -1,21 +1,12 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace SkinManager.Models
 {
-    public partial class KnownGameInfo : ObservableObject
+    public class KnownGameInfo
     {
-        [ObservableProperty]
-        public string _gameName  = string.Empty;
-        [ObservableProperty]
-        public string _skinsSiteName  = string.Empty;
-        [ObservableProperty]
-        public string _skinsSiteAddress  = string.Empty;
-        [ObservableProperty]
-        public List<SkinType> _skinTypes  = [];
+        public string GameName { get; set; } = string.Empty;
+        public string SkinsSiteName { get; set; } = string.Empty;
+        public string SkinsSiteAddress { get; set; } = string.Empty;
+        public List<SkinType> SkinTypes { get; set; } = [];
     }
 }

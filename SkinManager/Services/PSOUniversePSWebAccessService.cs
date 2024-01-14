@@ -1,15 +1,10 @@
 ﻿using HtmlAgilityPack;
 using SkinManager.Models;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Net.NetworkInformation;
-using System.Text;
 using System.Threading.Tasks;
-using Tmds.DBus.Protocol;
 
 namespace SkinManager.Services
 {
@@ -18,7 +13,6 @@ namespace SkinManager.Services
         private readonly Dictionary<SkinType, string> skinTypeAddresses = [];
         private readonly HttpClient _httpClient;
         public List<SkinType> SkinTypes { get; set; } = [];
-
 
         #region Web Address Strings
         private const string baseSiteAddress = "http://universps.online.fr/pso/bb/skin/listeSkinUS.php5";
@@ -97,11 +91,6 @@ namespace SkinManager.Services
             skinTypeAddresses.Add(new() { Name = "Other", SubTypes = ["Misc"] }, otherSkinsAddress);
         }
 
-        public IEnumerable<Skin> GetAvailableSkins()
-        {
-            return GetAvailableSkinsAsync().Result;
-        }
-
         public async Task<IEnumerable<Skin>> GetAvailableSkinsForSpecificTypeAsync(string skinTypeName)
         {
             SkinType currentType = skinTypeAddresses.First(x => x.Key.Name.Equals(skinTypeName, StringComparison.OrdinalIgnoreCase)).Key;
@@ -124,7 +113,7 @@ namespace SkinManager.Services
         {
             string response = await _httpClient.GetStringAsync(baseSiteAddress + address);
 
-            HtmlDocument theDoc = new HtmlDocument();
+            HtmlDocument theDoc = new();
 
             theDoc.LoadHtml(response);
 
@@ -227,13 +216,11 @@ namespace SkinManager.Services
                 {
                     return "Unknown";
                 }
-
             }
             else
             {
                 return tempSkinType.SubTypes[0];
             }
         }
-
     }
 }

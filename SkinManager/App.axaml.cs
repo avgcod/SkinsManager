@@ -30,7 +30,7 @@ namespace SkinManager
 
         public override void OnFrameworkInitializationCompleted()
         {
-            host = CreateHostBuilder(Array.Empty<string>()).Build();
+            host = CreateHostBuilder([]).Build();
             host.Start();
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -74,8 +74,6 @@ namespace SkinManager
             services.AddSingleton<LocalSkinsAccessService>();
 
             services.AddSingleton<PSOUniversePSWebAccessService>();
-
-            services.AddSingleton<ISettingsLoaderService, SettingsLoaderService>();
 
             services.AddSingleton<HttpClient>();
 
