@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -388,6 +389,7 @@ namespace SkinManager.ViewModels
                     using (IServiceScope serviceScope = _scopeFactory.CreateScope())
                     {
                         MessageBoxView mbView = serviceScope.ServiceProvider.GetRequiredService<MessageBoxView>();
+                        mbView.DataContext = serviceScope.ServiceProvider.GetRequiredService<MessageBoxViewModel>();
                         Messenger.Send(new MessageBoxMessage($"Skin download to {SkinsLocation}. " +
                             $"{Environment.NewLine} Please put the skin in the appropriate area, switch back to local and click reload skins."));
                         await mbView.ShowDialog(_currentWindow);
