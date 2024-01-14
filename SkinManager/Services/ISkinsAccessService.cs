@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.Messaging;
+﻿using Avalonia.Media.Imaging;
 using SkinManager.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -12,27 +12,46 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="skinsLocation">The location to look for skins at.</param>
         /// <returns>A collection of found skins.</returns>
-        IEnumerable<Skin> GetAvailableSkins(string skinsLocation);
-        
-        /// <summary>
-        /// Get the location of screenshots for a provided skin.
-        /// </summary>
-        /// <param name="currentSkin">The skin to get screen shots of.</param>
-        /// <returns>Collection of found screen shot full qualified names.</returns>
-        IEnumerable<string> GetSkinScreenshots(Skin currentSkin);
+        Task<IEnumerable<Skin>> GetAvailableSkinsAsync();
 
         /// <summary>
-        /// Get the location of screenshots for a provided skin.
+        /// Sets the current game to manage skins for.
         /// </summary>
-        /// <param name="currentSkin">The skin to get screen shots of.</param>
-        /// <returns>Collection of found screen shot full qualified names.</returns>
-        Task<IEnumerable<string>> GetSkinScreenshotsAsync(Skin currentSkin);
+        /// <param name="currentGame">The game to manage skins for.</param>
+        void SetCurrentGame(string currentGameName);
+
         /// <summary>
-        /// Gets the available skins in a provided location.
+        /// Sets the current skin source.
         /// </summary>
-        /// <param name="skinsLocation">The location to look for skins at.</param>
-        /// <returns>A collection of found skins.</returns>
-        Task<IEnumerable<Skin>> GetAvailableSkinsAsync(string skinsDirectoryName);
+        /// <param name="skinsSource">The current skins source.</param>
+        void SetSkinsSource(SkinsSource skinsSource);
+
+        /// <summary>
+        ///Downloads the specified skin and returns the contents as a stream.
+        /// </summary>
+        /// <param name="skinToDownload">the skin to download.</param>
+        /// <param name="skinsFolder">Where to save the skin.</param>
+        /// <returns>If the operations succeeded.</returns>
+        Task<bool> DownloadSkin(Skin skinToDownload, string skinsFolder);
+
+        Dictionary<string, List<Skin>> GetCachedWebSkins();
+        Task<IEnumerable<Skin>> GetWebSkinsForSpecificSkinType(string skinTypeName);
+        IEnumerable<KnownGameInfo> GetKnownGames();
+        bool SelectedGameIsKnown(string gameName);
+        void Initialize(string knownGamesInfoFile, string gamesInfoFile);
+
+        IEnumerable<string> GetGameNames();
+        IEnumerable<GameInfo> GetGamesCollection();
+        IEnumerable<SkinType> GetAvailableSkinTypes();
+        void AddAppliedSkin(string appliedSkinName);
+        void RemoveAppliedSkin(string removedSkinName);
+        string GetAppliedSkinNameFromLocation(string selectedSkinTypeName, string selectedSkinSubypeName);
+        IEnumerable<string> GetAvailableSkinNames(string selectedSkinTypeName, string selectedSkinSubypeName);
+        IEnumerable<string> GetOriginalSkinNames();
+        string GetSkinsLocation();
+        string GetGameLocation();
+        string GetGameExecutableLocation();
+        IEnumerable<SkinType> GetSkinTypesForWeb();
 
     }
 }

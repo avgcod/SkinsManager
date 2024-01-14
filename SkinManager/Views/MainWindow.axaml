@@ -1,241 +1,313 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:SkinManager.ViewModels"
-        xmlns:models="using:SkinManager.Models"
-        xmlns:custom="using:SkinManager.Components"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="550" d:DesignHeight="575"
-        MinWidth="550" MinHeight="575"
-        Width="550" Height="575"
-        CanResize="True"
-        x:Class="SkinManager.Views.MainWindow"
-        x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/toomanyboxesforaman.ico"
-        Title="Skin Manager">
+<Window
+    x:Class="SkinManager.Views.MainWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="using:SkinManager.Converters"
+    xmlns:custom="using:SkinManager.Components"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:SkinManager.Models"
+    xmlns:vm="using:SkinManager.ViewModels"
+    Title="Skin Manager"
+    Width="675"
+    Height="650"
+    MinWidth="650"
+    MinHeight="600"
+    x:DataType="vm:MainWindowViewModel"
+    CanResize="True"
+    Icon="/Assets/toomanyboxesforaman.ico"
+    mc:Ignorable="d">
 
-  <Grid>
-    <StackPanel VerticalAlignment="Center"
-                IsVisible="{Binding Busy}"
-                Grid.ColumnSpan="2">
+    <Window.Resources>
+        <converters:SelectedSourceEnumToTestConverter x:Key="SelectedSourceEnumToTestConverter" />
+    </Window.Resources>
 
-      <TextBlock Text="Processing. Please Wait"
-                 HorizontalAlignment="Center"/>
+    <Grid>
+        <StackPanel
+            Grid.ColumnSpan="2"
+            VerticalAlignment="Center"
+            IsVisible="{Binding Busy}">
 
-      <custom:LoadingSpinner Margin="0 10 0 0"
-                             IsLoading="{Binding Busy}"
-                             Diameter="150"
-                             Thickness="5"
-                             Color="CadetBlue"/>
+            <TextBlock HorizontalAlignment="Center" Text="{Binding ProcessingText}" />
 
-    </StackPanel>
+            <custom:LoadingSpinner
+                Margin="0,10,0,0"
+                Diameter="150"
+                IsLoading="{Binding Busy}"
+                Thickness="5"
+                Color="CadetBlue" />
 
-    <Grid Margin="10" IsVisible="{Binding !Busy}">
-      <Grid.RowDefinitions>
-        <RowDefinition Height="auto"/>
-        <RowDefinition Height="auto"/>
-        <RowDefinition Height="auto"/>
-        <RowDefinition Height="auto"/>
-        <RowDefinition Height="auto"/>
-        <RowDefinition Height="auto"/>
-        <RowDefinition Height="auto"/>
-        <RowDefinition Height="auto"/>
-        <RowDefinition Height="*"/>
-        <RowDefinition Height="auto"/>
-        <RowDefinition Height="auto"/>
-      </Grid.RowDefinitions>
+        </StackPanel>
 
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="auto"/>
-        <ColumnDefinition Width="*"/>
-        <ColumnDefinition Width="auto"/>
-      </Grid.ColumnDefinitions>
+        <Grid Margin="10" IsVisible="{Binding !Busy}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="auto" />
+            </Grid.RowDefinitions>
 
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto" />
+                <ColumnDefinition Width="auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
-
-      <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
-                  Orientation="Horizontal" Spacing="5">
-        <TextBlock  Text="Game:" VerticalAlignment="Center"/>
-        <ComboBox x:Name="gamesListcbx" Margin="0 0 0 5" MinWidth="225"
-                  ItemsSource="{Binding GamesList}"
-                  SelectedItem="{Binding SelectedGame}">
-          <ComboBox.ItemTemplate>
-            <DataTemplate DataType="models:GameInfo">
-              <TextBlock Text="{Binding GameName}"/>
-            </DataTemplate>
-          </ComboBox.ItemTemplate>
-        </ComboBox>
-
-        <TextBlock Text="Source:" VerticalAlignment="Center"/>
-
-        <ComboBox x:Name="skinsSourceCbx"
-                  MinWidth="100"
-                  SelectedItem="{Binding SelectedSource}"
-                  IsEnabled="{Binding GameIsKnown}"
-                  VerticalAlignment="Center">
-          <ComboBoxItem Content="Local"/>
-          <ComboBoxItem Content="Web"/>
-        </ComboBox>
-      </StackPanel>
-      
-      <Button Grid.Row="0" Grid.Column="2" Content="Add Game"
-              HorizontalAlignment="Center"
-              Command="{Binding AddNewGameCommand}"/>
-
-      <TextBlock Grid.Row="1"
-                 Grid.Column="0"
-                 VerticalAlignment="Center"
-                 Text="Skins Folder:"/>
-
-      <TextBox Grid.Row="1"
-               Grid.Column="1"
-               IsReadOnly="True"
-               MinWidth="150"
-               IsEnabled="False"
-               Text="{Binding SelectedGame.SkinsLocation}"/>
-
-      <Button Grid.Row="1"
-              Grid.Column="2"
-              Content="Browse"
-              HorizontalAlignment="Center"
-              Command="{Binding BrowseFolderCommand}"
-              CommandParameter="Skins"/>
-
-      <TextBlock Grid.Row="2"
-                 Grid.Column="0"
-                 VerticalAlignment="Center"
-                 Text="Game Folder:"/>
-
-      <TextBox Grid.Row="2"
-               Grid.Column="1"
-               IsReadOnly="True"
-               MinWidth="150"
-               Margin="0 5"
-               IsEnabled="False"
-               Text="{Binding SelectedGame.GameLocation}"/>
-
-
-      <Button Grid.Row="2"
-              Grid.Column="2"
-              Content="Browse"
-              HorizontalAlignment="Center"
-              Command="{Binding BrowseFolderCommand}"
-              CommandParameter="Install"/>
-
-      <TextBlock Grid.Row="3"
+            <TextBlock
+                Grid.Row="0"
                 Grid.Column="0"
                 VerticalAlignment="Center"
-                Text="Game File:"/>
-
-      <TextBox Grid.Row="3"
-               Grid.Column="1"
-               IsReadOnly="True"
-               MinWidth="150"
-               IsEnabled="False"
-               Text="{Binding SelectedGame.GameExecutable}"/>
-
-      <Button Grid.Row="3"
-              Grid.Column="2"
-              Content="Browse"
-              HorizontalAlignment="Center"
-              Command="{Binding BrowseExecutableCommand}"/>
-
-      <Button Grid.Row="4"
-              Grid.Column="1"
-              Content="Reload Skins"
-              HorizontalAlignment="Center"
-              Margin="0 5 0 0"
-              Command="{Binding ReloadSkinsCommand}"/>
-
-      <TextBlock Grid.Row="5"
-                 Grid.Column="0"
-                 Text="Skin Type:"
-                 VerticalAlignment="Center"/>
-
-      <ComboBox Grid.Row="5"
+                Text="Game:" />
+            <ComboBox
+                x:Name="gamesListcbx"
+                Grid.Row="0"
                 Grid.Column="1"
-                Margin="0 10"
-                MinWidth="121"
+                MinWidth="225"
+                Margin="0,0,0,5"
+                ItemsSource="{Binding GamesList}"
+                SelectedItem="{Binding SelectedGameName}" />
+
+            <TextBlock
+                Grid.Row="0"
+                Grid.Column="2"
+                Margin="2,0,0,0"
+                VerticalAlignment="Center"
+                Text="Source:" />
+
+            <ComboBox
+                x:Name="skinsSourceCbx"
+                Grid.Row="0"
+                Grid.Column="3"
+                MinWidth="100"
+                VerticalAlignment="Center"
+                IsEnabled="{Binding GameIsKnown}"
+                SelectedItem="{Binding SelectedSource, Converter={StaticResource SelectedSourceEnumToTestConverter}}">
+                <ComboBoxItem Content="Local" />
+                <ComboBoxItem Content="Web" />
+            </ComboBox>
+
+            <Button
+                Grid.Row="0"
+                Grid.Column="4"
                 HorizontalAlignment="Center"
-                SelectedItem="{Binding SelectedSkinType}"
-                ItemsSource="{Binding SkinTypes}">
-        <ComboBox.ItemTemplate>
-          <DataTemplate DataType="models:SkinType">
-            <TextBlock Text="{Binding Name}"/>
-          </DataTemplate>
-        </ComboBox.ItemTemplate>
-      </ComboBox>
+                Command="{Binding AddNewGameCommand}"
+                Content="Add Game" />
 
-      <TextBlock Grid.Row="6"
-                 Grid.Column="0"
-                 Text="Sub Type:"
-                 VerticalAlignment="Center"/>
+            <TextBlock
+                Grid.Row="1"
+                Grid.Column="0"
+                VerticalAlignment="Center"
+                Text="Skins Folder:" />
 
-      <ComboBox Grid.Row="6"
-                  Grid.Column="1"
-                  MinWidth="121"
-                  Margin="0 0 0 0"
-                  HorizontalAlignment="Center"
-                  SelectedItem="{Binding SelectedSkinSubType}"
-                  ItemsSource="{Binding SelectedSkinType.SubTypes}">
-      </ComboBox>
+            <TextBox
+                Grid.Row="1"
+                Grid.Column="1"
+                Grid.ColumnSpan="3"
+                MinWidth="150"
+                IsEnabled="False"
+                IsReadOnly="True"
+                Text="{Binding SkinsLocation}" />
 
-      <TextBlock Grid.Row="7"
-                 Grid.Column="0"
-                 Text="Applied Skin:"
-                 VerticalAlignment="Center"/>
+            <Button
+                Grid.Row="1"
+                Grid.Column="4"
+                HorizontalAlignment="Center"
+                Command="{Binding BrowseFolderCommand}"
+                CommandParameter="Skins"
+                Content="Browse" />
 
-      <TextBlock Grid.Row="7"
-                 Grid.Column="1"
-                 MinWidth="121"
-                 Margin="0 5"
-                 Text="{Binding AppliedSkinName}"
-                 HorizontalAlignment="Left"/>
+            <TextBlock
+                Grid.Row="2"
+                Grid.Column="0"
+                VerticalAlignment="Center"
+                Text="Game Folder:" />
 
-      <TextBlock Grid.Row="8"
-           Grid.Column="0"
-           Text="Available Skins:"/>
+            <TextBox
+                Grid.Row="2"
+                Grid.Column="1"
+                Grid.ColumnSpan="3"
+                MinWidth="150"
+                Margin="0,5"
+                IsEnabled="False"
+                IsReadOnly="True"
+                Text="{Binding GameLocation}" />
 
-      <ListBox Grid.Row="8"
-               Grid.Column="1"
-               MinHeight="150"
-               MinWidth="250"
-               HorizontalAlignment="Center"
-               ItemsSource="{Binding AvailableSkinNames}"
-               SelectedItem="{Binding SelectedSkinName}"/>
 
-      <Button Grid.Row="9"
-              Grid.Column="1"
-              Margin="0 0 0 10"
-              HorizontalAlignment="Center"
-              Content="Apply Skin"
-              Command="{Binding ApplySkinCommand}"/>
+            <Button
+                Grid.Row="2"
+                Grid.Column="4"
+                HorizontalAlignment="Center"
+                Command="{Binding BrowseFolderCommand}"
+                CommandParameter="Install"
+                Content="Browse" />
 
-      <StackPanel Orientation="Horizontal" Grid.Row="10"
-              Grid.Column="0">
+            <TextBlock
+                Grid.Row="3"
+                Grid.Column="0"
+                VerticalAlignment="Center"
+                Text="Game File:" />
 
-        <Button Content="Backup"
-                Command="{Binding CreateBackupCommand}"/>
+            <TextBox
+                Grid.Row="3"
+                Grid.Column="1"
+                Grid.ColumnSpan="3"
+                MinWidth="150"
+                IsEnabled="False"
+                IsReadOnly="True"
+                Text="{Binding GameExecutableLocation}" />
 
-        <Button Content="Restore"
-                Command="{Binding RestoreCommand}"/>
+            <Button
+                Grid.Row="3"
+                Grid.Column="4"
+                HorizontalAlignment="Center"
+                Command="{Binding BrowseExecutableCommand}"
+                Content="Browse" />
 
-      </StackPanel>
+            <Button
+                Grid.Row="4"
+                Grid.Column="1"
+                Grid.ColumnSpan="3"
+                Margin="0,5,0,0"
+                HorizontalAlignment="Center"
+                Command="{Binding ReloadSkinsCommand}"
+                Content="Reload Skins" />
 
-      <Button Grid.Row="10"
-              Grid.Column="1"
-              Content="Create Folder Structure"
-              HorizontalAlignment="Center"
-              IsVisible="{Binding !StructureCreated}"
-              Command="{Binding CreateStructureCommand}"/>
+            <TextBlock
+                Grid.Row="5"
+                Grid.Column="0"
+                VerticalAlignment="Center"
+                Text="Skin Type:" />
 
-      <Button Grid.Row="10"
-              Grid.Column="2"
-              Content="Start Game"
-              Command="{Binding StartGameAsync}"/>
+            <ComboBox
+                Grid.Row="5"
+                Grid.Column="1"
+                Grid.ColumnSpan="3"
+                MinWidth="121"
+                Margin="0,10"
+                HorizontalAlignment="Center"
+                ItemsSource="{Binding SkinTypeNames}"
+                SelectedItem="{Binding SelectedSkinTypeName}" />
+
+            <TextBlock
+                Grid.Row="6"
+                Grid.Column="0"
+                VerticalAlignment="Center"
+                Text="Sub Type:" />
+
+            <ComboBox
+                Grid.Row="6"
+                Grid.Column="1"
+                Grid.ColumnSpan="3"
+                MinWidth="121"
+                Margin="0,0,0,0"
+                HorizontalAlignment="Center"
+                ItemsSource="{Binding SkinSubTypes}"
+                SelectedItem="{Binding SelectedSkinSubType}" />
+
+            <TextBlock
+                Grid.Row="7"
+                Grid.Column="0"
+                VerticalAlignment="Center"
+                Text="Applied Skin:" />
+
+            <TextBlock
+                Grid.Row="7"
+                Grid.Column="1"
+                Grid.ColumnSpan="3"
+                MinWidth="121"
+                Margin="0,5"
+                HorizontalAlignment="Center"
+                Text="{Binding AppliedSkinName}" />
+
+            <TextBlock
+                Grid.Row="8"
+                Grid.Column="0"
+                Text="Available Skins:" />
+
+            <ListBox
+                Grid.Row="8"
+                Grid.Column="1"
+                MinWidth="200"
+                MaxWidth="300"
+                MaxHeight="250"
+                HorizontalAlignment="Center"
+                ItemsSource="{Binding AvailableSkinNames}"
+                ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                SelectedItem="{Binding SelectedSkinName}" />
+
+            <TextBlock
+                Grid.Row="8"
+                Grid.Column="2"
+                Grid.ColumnSpan="2"
+                HorizontalAlignment="Center"
+                Text="Screenshots:" />
+
+            <Image
+                Grid.Row="8"
+                Grid.Column="2"
+                Grid.ColumnSpan="2"
+                MinWidth="100"
+                MinHeight="150"
+                Margin="5,0"
+                Source="{Binding Screenshot1}"
+                Stretch="UniformToFill" />
+
+            <Image
+                Grid.Row="8"
+                Grid.Column="4"
+                MinWidth="100"
+                MinHeight="150"
+                Source="{Binding Screenshot2}"
+                Stretch="UniformToFill" />
+
+            <Button
+                Grid.Row="9"
+                Grid.Column="1"
+                Grid.ColumnSpan="3"
+                Margin="0,0,0,10"
+                HorizontalAlignment="Center"
+                Command="{Binding ApplySkinCommand}"
+                Content="{Binding AppySkinButtonText}" />
+
+
+            <Button
+                Grid.Row="10"
+                Grid.Column="0"
+                Command="{Binding CreateBackupCommand}"
+                Content="Backup" />
+
+            <Button
+                Grid.Row="10"
+                Grid.Column="1"
+                Command="{Binding RestoreCommand}"
+                Content="Restore" />
+
+            <Button
+                Grid.Row="10"
+                Grid.Column="2"
+                HorizontalAlignment="Center"
+                Command="{Binding CreateStructureCommand}"
+                Content="Create Folder Structure"
+                IsVisible="{Binding !StructureCreated}" />
+
+            <Button
+                Grid.Row="10"
+                Grid.Column="4"
+                Command="{Binding StartGameAsync}"
+                Content="Start Game" />
+
+        </Grid>
 
     </Grid>
-    
-  </Grid>
 
 </Window>

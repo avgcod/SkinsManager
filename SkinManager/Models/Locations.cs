@@ -6,5 +6,5 @@ using System.Threading.Tasks;
 
 namespace SkinManager.Models
 {
-    public record Locations(string GameInfoFile, string AppliedSkinsFile, string KnownGamesFile);
+    public record Locations(string GameInfoFile, string KnownGamesFile);
 }

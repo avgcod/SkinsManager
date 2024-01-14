@@ -11,7 +11,6 @@ namespace SkinManager.ViewModels
     public partial class ErrorMessageBoxViewModel : ViewModelBase, IRecipient<ErrorMessage>
     {
         private readonly Window _currentWindow;
-        private readonly IMessenger _theMessenger;
 
         [ObservableProperty]
         private string _errorType = string.Empty;
@@ -19,19 +18,18 @@ namespace SkinManager.ViewModels
         [ObservableProperty]
         private string _errorText = string.Empty;
 
-        public ErrorMessageBoxViewModel(ErrorMessageBoxView theWindow, IMessenger theMessenger)
+        public ErrorMessageBoxViewModel(ErrorMessageBoxView theWindow, IMessenger theMessenger) : base(theMessenger)
         {
             _currentWindow = theWindow;
-            _theMessenger = theMessenger;
 
-            _theMessenger.RegisterAll(this);
+            Messenger.RegisterAll(this);
             _currentWindow.Closed += Window_Closed;
 
         }
 
         private void Window_Closed(object? sender, EventArgs e)
         {
-            _theMessenger.UnregisterAll(this);
+            Messenger.UnregisterAll(this);
             _currentWindow.Closed -= Window_Closed;
         }
 

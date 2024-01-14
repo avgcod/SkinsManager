@@ -3,7 +3,7 @@ using SkinManager.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
+using System.Xml.Serialization;
 using System.Threading.Tasks;
 
 namespace SkinManager.Services
@@ -14,12 +14,11 @@ namespace SkinManager.Services
     public class SettingsLoaderService(IMessenger theMessenger) : ISettingsLoaderService
     {
         private readonly IMessenger _theMessenger = theMessenger;
-        private readonly JsonSerializerOptions options = new() { WriteIndented = true };
 
         /// <summary>
-        /// Loads a collection of GameInfo from a JSON file.
+        /// Loads a collection of GameInfo from a file.
         /// </summary>
-        /// <param name="gameInfoFileName">JSON file to load.</param>
+        /// <param name="gameInfoFileName">File to load.</param>
         /// <returns>Collection of GameInfo.</returns>
         public IEnumerable<GameInfo> GetGameInfo(string gameInfoFileName)
         {
@@ -46,72 +45,33 @@ namespace SkinManager.Services
             {
                 if (File.Exists(gameInfoFileName))
                 {
-                    return JsonSerializer.Deserialize<IEnumerable<GameInfo>>(File.OpenRead(gameInfoFileName)) ?? new List<GameInfo>();
+                    using Stream fileStream = File.OpenRead(gameInfoFileName);
+                    XmlSerializer theSerializer = new(typeof(List<GameInfo>));
+                    return theSerializer.Deserialize(File.OpenRead(gameInfoFileName)) as List<GameInfo> ?? [];
                 }
                 else
                 {
-                    return new List<GameInfo>();
+                    return [];
                 }
             }
             catch (Exception ex)
             {
                 _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-                return new List<GameInfo>();
+                return [];
             }
         }
         /// <summary>
-        /// Loads a collection of GameInfo from a JSON file.
-        /// </summary>
-        /// <param name="gameInfoFileName">JSON file to load.</param>
-        /// <returns>Collection of GameInfo.</returns>
-        public async Task<IEnumerable<GameInfo>> GetGameInfoAsync(string gameInfoFileName)
-        {
-            try
-            {
-                List<GameInfo> theGameInfo = [];
-                if (File.Exists(gameInfoFileName))
-                {
-                    Stream reader = File.OpenRead(gameInfoFileName);
-                    theGameInfo = await JsonSerializer.DeserializeAsync<List<GameInfo>>(reader) ?? [];
-                    reader.Close();
-                }
-                return theGameInfo;
-            }
-            catch (Exception ex)
-            {
-                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-                return new List<GameInfo>();
-            }
-
-        }
-        /// <summary>
-        /// Saves a collection of GameInfo to a JSON file.
+        /// Saves a collection of GameInfo to a file.
         /// </summary>
         /// <param name="gameInfo">Collection of GameInfo to save.</param>
-        /// <param name="gameInfoFileName">JSON file to save to.</param>
+        /// <param name="gameInfoFileName">File to save to.</param>
         public void SaveGameInfo(IEnumerable<GameInfo> gameInfo, string gameInfoFileName)
         {
             try
             {
-                JsonSerializer.Serialize(File.OpenWrite(gameInfoFileName), gameInfo, options);
-            }
-            catch (Exception ex)
-            {
-                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-            }
-
-        }
-        /// <summary>
-        /// Saves a collection of GameInfo to a JSON file.
-        /// </summary>
-        /// <param name="gameInfo">Collection of GameInfo to save.</param>
-        /// <param name="gameInfoFileName">JSON file to save to.</param>
-        public async Task SaveGameInfoAsync(IEnumerable<GameInfo> gameInfo, string gameInfoFileName)
-        {
-            try
-            {
-                using Stream writer = File.OpenWrite(gameInfoFileName);
-                await JsonSerializer.SerializeAsync(writer, gameInfo, options);
+                XmlSerializer theSerializer = new(gameInfo.GetType());
+                using TextWriter writer = new StreamWriter(gameInfoFileName);
+                theSerializer.Serialize(writer, gameInfo);
                 writer.Close();
             }
             catch (Exception ex)
@@ -123,7 +83,7 @@ namespace SkinManager.Services
         /// <summary>
         /// Loads the KnownGameInfo to prepopulate skin type and web skins resource.
         /// </summary>
-        /// <param name="knownGameInfoFileName">JSON file of the known game info.</param>
+        /// <param name="knownGameInfoFileName">File of the known game info.</param>
         /// <returns>Collection of KnownGameInfo.</returns>
         public IEnumerable<KnownGameInfo> GetKnowGamesInfo(string knownGameInfoFileName)
         {
@@ -150,56 +110,78 @@ namespace SkinManager.Services
             {
                 if (File.Exists(knownGameInfoFileName))
                 {
-                    return JsonSerializer.Deserialize<IEnumerable<KnownGameInfo>>(File.OpenRead(knownGameInfoFileName)) ?? new List<KnownGameInfo>();
+                    using Stream fileStream = File.OpenRead(knownGameInfoFileName);
+                    XmlSerializer theSerializer = new(typeof(List<KnownGameInfo>));
+                    return theSerializer.Deserialize(File.OpenRead(knownGameInfoFileName)) as List<KnownGameInfo> ?? [];
                 }
                 else
                 {
-                    return new List<KnownGameInfo>();
+                    return [];
                 }
             }
             catch (Exception ex)
             {
                 _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-                return new List<KnownGameInfo>();
+                return [];
             }
-        }
-        /// <summary>
-        /// Loads the KnownGameInfo to prepopulate skin type and web skins resource.
-        /// </summary>
-        /// <param name="knownGameInfoFileName">JSON file of the known game info.</param>
-        /// <returns>Collection of KnownGameInfo.</returns>
-        public async Task<IEnumerable<KnownGameInfo>> GetKnowGamesInfoAsync(string knownGameInfoFileName)
-        {
-            try
-            {
-                List<KnownGameInfo> theKnownGameInfo = [];
-                if (await FileExistsAsync(knownGameInfoFileName))
-                {
-                    Stream reader = File.OpenRead(knownGameInfoFileName);
-                    theKnownGameInfo = await JsonSerializer.DeserializeAsync<List<KnownGameInfo>>(reader) ?? [];
-                    reader.Close();
-                }
-                return theKnownGameInfo;
-            }
-            catch (Exception ex)
-            {
-                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-                return new List<KnownGameInfo>();
-            }
-
         }
         /// <summary>
         /// Saves a collection of KnownGameInfo to a file.
         /// </summary>
         /// <param name="knownGamesList">The collection of KnownGameInfo.</param>
-        /// <param name="fileName">JSON file to save to.</param>
-        public async Task SaveKnownGamesListAsync(IEnumerable<KnownGameInfo> knownGamesList, string fileName)
+        /// <param name="fileName">File to save to.</param>
+        public void SaveKnownGamesList(IEnumerable<KnownGameInfo> knownGamesList, string fileName)
         {
             try
             {
-                using Stream writer = File.OpenWrite(fileName);
-                await JsonSerializer.SerializeAsync(writer, knownGamesList, options);
+                XmlSerializer theSerializer = new(knownGamesList.GetType());
+                using TextWriter writer = new StreamWriter(fileName);
+                theSerializer.Serialize(writer, knownGamesList);
                 writer.Close();
+            }
+            catch (Exception ex)
+            {
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+            }
+        }
+
+        public Dictionary<string,List<Skin>> GetWebSkins(IEnumerable<string> gameNames)
+        {
+            Dictionary<string, List<Skin>> gameWebSkins = [];
+            try
+            {
+                foreach (string gameName in gameNames)
+                {
+                    string fileName = gameName + " Skins.xml";
+                    if (File.Exists(fileName))
+                    {
+                        using Stream fileStream = File.OpenRead(fileName);
+                        XmlSerializer theSerializer = new(typeof(List<Skin>));
+                        List<Skin> foundSkins =  theSerializer.Deserialize(fileStream) as List<Skin> ?? [];
+                        gameWebSkins.Add(gameName, foundSkins);
+                    }
+                }
+                return gameWebSkins;
+            }
+            catch (Exception ex)
+            {
+                _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                return [];
+            }
+        }
+
+        public void SaveWebSkinsList(Dictionary<string, List<Skin>> webSkins)
+        {
+            try
+            {
+                foreach (string currentGameName in webSkins.Keys)
+                {
+                    XmlSerializer theSerializer = new(webSkins[currentGameName].GetType());
+                    using TextWriter writer = new StreamWriter($"{currentGameName} Skins.xml");
+                    theSerializer.Serialize(writer, webSkins[currentGameName]);
+                    writer.Close();
+                }
+                
             }
             catch (Exception ex)
             {

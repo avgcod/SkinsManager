@@ -132,9 +132,33 @@
     "Name": "UI",
     "SubTypes": [
       "HUD",
-      "Title",
-      "Audio",
+      "Text",
+      "TitleScreen"
+    ]
+  },
+  {
+    "Name": "Object",
+    "SubTypes": [
       "Box"
+    ]
+  },
+  {
+    "Name": "Pack",
+    "SubTypes": [
+      "UI",
+      "Area",
+      "Enemy",
+      "Audio",
+      "Complete"
+    ]
+  },
+  {
+    "Name": "Audio",
+    "SubTypes": [
+      "System",
+      "Effect",
+      "Character",
+      "Enemy"
     ]
   },
   {
@@ -153,6 +177,27 @@
       "Buff",
       "Healing",
       "Other"
+    ]
+  },
+  {
+    "Name": "NPC",
+    "SubTypes": [
+      "Ninja",
+      "Rico",
+      "Sonic",
+      "Knuckles",
+      "Tails",
+      "Flowen",
+      "Elly",
+      "Momoka",
+      "Irene",
+      "GuildHostess",
+      "Monster",
+      "Knuckles",
+      "Tails",
+      "Flowen",
+      "Elly",
+      "Momoka"
     ]
   }
 ]

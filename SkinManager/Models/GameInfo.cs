@@ -6,14 +6,16 @@ namespace SkinManager.Models
     public partial class GameInfo : ObservableObject
     {
         [ObservableProperty]
-        public string _gameName = string.Empty;
+        public string _gameName  = string.Empty;
         [ObservableProperty]
-        public string _skinsLocation = string.Empty;
+        public string _skinsLocation  = string.Empty;
         [ObservableProperty]
-        public string _gameLocation = string.Empty;
+        public string _gameLocation  = string.Empty;
         [ObservableProperty]
-        public string _gameExecutable = string.Empty;
+        public string _gameExecutable  = string.Empty;
         [ObservableProperty]
         public List<string> _appliedSkins  = [];
+        [ObservableProperty]
+        public List<SkinType> _skinTypes  = [];
     }
 }

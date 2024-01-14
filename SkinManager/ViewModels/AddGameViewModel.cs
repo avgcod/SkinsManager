@@ -7,21 +7,25 @@ using SkinManager.Views;
 
 namespace SkinManager.ViewModels
 {
-    public partial class AddGameViewModel(AddGameView theWindow, IMessenger theMessenger) : ViewModelBase
+    public partial class AddGameViewModel : ViewModelBase
     {
-        private readonly IMessenger _theMessenger = theMessenger;
-        private readonly Window _theWindow = theWindow;
+        private readonly Window _theWindow;
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(OKClickedCommand))]
         public string _gameName = string.Empty;
+
+        public AddGameViewModel(AddGameView theWindow, IMessenger theMessenger) : base(theMessenger)
+        {
+            _theWindow = theWindow;
+        }
 
         public bool CanOK => !string.IsNullOrEmpty(GameName);
 
         [RelayCommand(CanExecute =nameof(CanOK))]
         public void OKClicked()
         {
-            _theMessenger.Send(new NewGameMessage(GameName));
+            Messenger.Send(new NewGameMessage(GameName));
             _theWindow.Close();
         }
 

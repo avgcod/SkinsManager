@@ -12,17 +12,15 @@ namespace SkinManager.ViewModels
     public partial class MessageBoxViewModel : ViewModelBase, IRecipient<MessageBoxMessage>
     {
         private readonly Window _currentWindow;
-        private readonly IMessenger _theMessenger;
 
         [ObservableProperty]
         private string _messageText = string.Empty;
 
-        public MessageBoxViewModel(MessageBoxView currentWindow, IMessenger theMessenger)
+        public MessageBoxViewModel(MessageBoxView currentWindow, IMessenger theMessenger) : base(theMessenger)
         {
             _currentWindow = currentWindow;
-            _theMessenger = theMessenger;
 
-            _theMessenger.RegisterAll(this);
+            Messenger.RegisterAll(this);
             _currentWindow.Opened += OnWindowOpened;
             _currentWindow.Closing += OnWindowClosing;
         }
@@ -45,7 +43,7 @@ namespace SkinManager.ViewModels
 
         private void OnWindowClosing(object? sender, CancelEventArgs e)
         {
-            _theMessenger.UnregisterAll(this);
+            Messenger.UnregisterAll(this);
             _currentWindow.Opened -= OnWindowOpened;
             _currentWindow.Closing -= OnWindowClosing;
         }

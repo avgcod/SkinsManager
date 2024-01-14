@@ -12,6 +12,7 @@ using SkinManager.Models;
 using Avalonia.Controls;
 using System;
 using SkinManager.Services;
+using System.Net.Http;
 
 namespace SkinManager
 {
@@ -61,19 +62,24 @@ namespace SkinManager
             => configurationBuilder.AddUserSecrets(typeof(App).Assembly))
         .ConfigureServices((hostContext, services) =>
         {
-            services.AddSingleton<Locations>(new Locations("GameInfo.json", "AppliedSkins.json", "KnownGames.json"));
+            services.AddSingleton<Locations>(new Locations("GameInfo.xml", "KnownGames.xml"));
 
-            services.AddSingleton<Func<LocalSkinsAccessService>>(provider
-                => () => provider.GetRequiredService<LocalSkinsAccessService>());
-            services.AddSingleton<ILocalSkinsAccessServiceFactory, LocalSkinsAccessServiceFactory>();
+            services.AddSingleton<HttpClient>(new HttpClient());
 
-            services.AddSingleton<Func<WebSkinsAccessService>>(provider
-                => () => provider.GetRequiredService<WebSkinsAccessService>());
-            services.AddSingleton<IWebSkinsAccessServiceFactory, WebSkinsAccessServiceFactory>();
+            services.AddSingleton<FileAccessService>();
+            services.AddSingleton<IFileAccessService, FileAccessService>(provider => provider.GetRequiredService<FileAccessService>());
+
+            services.AddSingleton<ISkinsAccessService, SkinsAccessService>();
+
+            services.AddSingleton<LocalSkinsAccessService>();
+
+            services.AddSingleton<PSOUniversePSWebAccessService>();
 
             services.AddSingleton<ISettingsLoaderService, SettingsLoaderService>();
 
-            services.AddSingleton<Window,MainWindow>();
+            services.AddSingleton<HttpClient>();
+
+            services.AddSingleton<MainWindow>();
             services.AddSingleton<MainWindowViewModel>();
 
             services.AddSingleton<StrongReferenceMessenger>();

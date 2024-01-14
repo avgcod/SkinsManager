@@ -13,49 +13,9 @@ namespace SkinManager.Services;
 /// <summary>
 /// This class provides access to files on the local file system.
 /// </summary>
-public class LocalSkinsAccessService(IMessenger theMessenger) : ISkinsAccessService
+public class LocalSkinsAccessService(IMessenger theMessenger)
 {
     private readonly IMessenger _theMessenger = theMessenger;
-
-    public IEnumerable<Skin> GetAvailableSkins(string skinsFolder)
-    {
-        try
-        {
-            List<Skin> skins = [];
-            if (Directory.Exists(skinsFolder))
-            {
-                DirectoryInfo rootDirectory = new (skinsFolder);
-                foreach (DirectoryInfo skinTypeDirectory in rootDirectory.GetDirectories())
-                {
-                    foreach (DirectoryInfo subTypeDirectory in skinTypeDirectory.GetDirectories())
-                    {
-                        if (subTypeDirectory.Name != "Originals")
-                        {
-                            foreach (DirectoryInfo skinDirectory in subTypeDirectory.GetDirectories())
-                            {
-                                skins.Add(new Skin(new SkinType(subTypeDirectory.Parent?.Name ?? subTypeDirectory.Name,
-                                    new List<string>()),
-
-                                    subTypeDirectory.Name,
-                                    skinDirectory.Name,
-                                    skinDirectory.FullName,
-                                    string.Empty,
-                                    string.Empty,
-                                    DateOnly.FromDateTime(skinDirectory.CreationTime),
-                                    DateOnly.FromDateTime(skinDirectory.CreationTime)));
-                            }
-                        }
-                    }
-                }
-            }
-            return skins;
-        }
-        catch (Exception ex)
-        {
-            _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-            return new List<Skin>();
-        }
-    }
 
     public async Task<IEnumerable<Skin>> GetAvailableSkinsAsync(string skinsFolder)
     {
@@ -64,7 +24,7 @@ public class LocalSkinsAccessService(IMessenger theMessenger) : ISkinsAccessServ
             List<Skin> skins = [];
             if (await DirectoryExistsAsync(skinsFolder))
             {
-                DirectoryInfo rootDirectory = new (skinsFolder);
+                DirectoryInfo rootDirectory = new(skinsFolder);
                 await Task.Run(() =>
                 {
                     foreach (DirectoryInfo skinTypeDirectory in rootDirectory.GetDirectories())
@@ -75,16 +35,37 @@ public class LocalSkinsAccessService(IMessenger theMessenger) : ISkinsAccessServ
                             {
                                 foreach (DirectoryInfo skinDirectory in subTypeDirectory.GetDirectories())
                                 {
-                                    skins.Add(new Skin(new SkinType(subTypeDirectory.Parent?.Name ?? subTypeDirectory.Name,
-                                        new List<string>()),
+                                    Skin tempSkin = new Skin()
+                                    {
+                                        Name = skinDirectory.Name,
+                                        CreationDate = DateOnly.FromDateTime(skinDirectory.CreationTime),
+                                        LastUpdatedDate = DateOnly.FromDateTime(skinDirectory.LastWriteTime),
+                                        Location = skinDirectory.FullName,
+                                        SkinType = new SkinType() { Name = subTypeDirectory.Parent?.Name ?? skinTypeDirectory.Name },
+                                        SubType = subTypeDirectory.Name
+                                    };
 
-                                        subTypeDirectory.Name,
-                                        skinDirectory.Name,
-                                        skinDirectory.FullName,
-                                        string.Empty,
-                                        string.Empty,
-                                        DateOnly.FromDateTime(skinDirectory.CreationTime),
-                                        DateOnly.FromDateTime(skinDirectory.CreationTime)));
+                                    if (skinDirectory.Name.Contains("_by_"))
+                                    {
+                                        tempSkin.Name = skinDirectory.Name.Split("_by_")[1];
+                                        int authorStartIndex = skinDirectory.Name.IndexOf("_by_");
+                                        tempSkin.Description = $"{skinDirectory.Name} {subTypeDirectory.Name} skin {skinDirectory.Name.Remove(authorStartIndex)}.";
+                                    }
+                                    else
+                                    {
+                                        tempSkin.Description = $"{skinDirectory.Name} {subTypeDirectory.Name} skin {skinDirectory.Name}.";
+                                    }
+
+                                    string screenshotsFolder = Path.Combine(subTypeDirectory.FullName, "Screenshots");
+                                    if (Directory.Exists(screenshotsFolder))
+                                    {
+                                        foreach (string screenshotLocation in new DirectoryInfo(screenshotsFolder).GetFiles().Select(x => x.FullName))
+                                        {
+                                            tempSkin.Screenshots.Add(screenshotLocation);
+                                        }
+                                    }
+
+                                    skins.Add(tempSkin);
                                 }
                             }
                         }
@@ -118,13 +99,4 @@ public class LocalSkinsAccessService(IMessenger theMessenger) : ISkinsAccessServ
         }
     }
 
-    public IEnumerable<string> GetSkinScreenshots(Skin currentSkin)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<IEnumerable<string>> GetSkinScreenshotsAsync(Skin currentSkin)
-    {
-        throw new NotImplementedException();
-    }
 }

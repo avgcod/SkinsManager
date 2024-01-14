@@ -7,11 +7,10 @@ namespace SkinManager.Services
     public interface ISettingsLoaderService
     {
         IEnumerable<GameInfo> GetGameInfo(string gameInfoFileName);
-        Task<IEnumerable<GameInfo>> GetGameInfoAsync(string gameInfoFileName);
         IEnumerable<KnownGameInfo> GetKnowGamesInfo(string knownGameInfoFileName);
-        Task<IEnumerable<KnownGameInfo>> GetKnowGamesInfoAsync(string knownGameInfoFileName);
         void SaveGameInfo(IEnumerable<GameInfo> gameInfo, string gameInfoFileName);
-        Task SaveGameInfoAsync(IEnumerable<GameInfo> gameInfo, string gameInfoFileName);
-        Task SaveKnownGamesListAsync(IEnumerable<KnownGameInfo> knownGamesList, string fileName);
+        void SaveKnownGamesList(IEnumerable<KnownGameInfo> knownGamesList, string fileName);
+        Dictionary<string, List<Skin>> GetWebSkins(IEnumerable<string> gameNames);
+        void SaveWebSkinsList(Dictionary<string, List<Skin>> webSkins);
     }
 }
