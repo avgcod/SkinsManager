@@ -49,7 +49,7 @@ namespace SkinManager
 
         private async void Desktop_Exit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
         {
-            if(host is not null)
+            if (host is not null)
             {
                 await host.StopAsync();
                 host.Dispose();
@@ -74,6 +74,7 @@ namespace SkinManager
             services.AddSingleton<LocalSkinsAccessService>();
 
             services.AddSingleton<PSOUniversePSWebAccessService>();
+            services.AddSingleton<EphineaWebAccessService>();
 
             services.AddSingleton<HttpClient>();
 

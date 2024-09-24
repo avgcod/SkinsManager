@@ -229,6 +229,38 @@ namespace SkinManager.Services
                 return [];
             }
         }
+        //PSOUniversePS
+        //public async Task<IEnumerable<Skin>> GetWebSkinsForSpecificSkinType(string skinTypeName)
+        //{
+        //    KnownGameInfo? currentKnownGame = _knownGames.Single(x => x.GameName == _games[_currentGameIndex].GameName);
+        //    int knownGameIndex = _knownGames.FindIndex(x => x.GameName == currentKnownGame.GameName);
+        //    int skinTypeIndex = _knownGames[knownGameIndex].SkinTypes.FindIndex(x => x.Name == skinTypeName);
+        //    if ((DateOnly.FromDateTime(DateTime.Now).DayNumber - _knownGames[knownGameIndex].SkinTypes[skinTypeIndex].LastOnlineCheck.DayNumber) > 1)
+        //    {
+        //        using IServiceScope serviceScope = _scopeFactory.CreateScope();
+        //        PSOUniversePSWebAccessService webAccessService = serviceScope.ServiceProvider.GetRequiredService<PSOUniversePSWebAccessService>();
+        //        webAccessService.SkinTypes = _games[_currentGameIndex].SkinTypes.DistinctBy(x => x.Name).ToList();
+        //        if (!_gameSkins.ContainsKey(_games[_currentGameIndex].GameName))
+        //        {
+        //            _gameSkins.Add(_games[_currentGameIndex].GameName, []);
+        //        }
+        //        foreach (Skin currentSkin in await webAccessService.GetAvailableSkinsForSpecificTypeAsync(skinTypeName))
+        //        {
+        //            if (!_gameSkins[_games[_currentGameIndex].GameName].Any(x => x.Name == currentSkin.Name))
+        //            {
+        //                _gameSkins[_games[_currentGameIndex].GameName].Add(currentSkin);
+        //            }
+        //        }
+
+        //        _knownGames[knownGameIndex].SkinTypes[skinTypeIndex].LastOnlineCheck = DateOnly.FromDateTime(DateTime.Now);
+        //        return _gameSkins[_games[_currentGameIndex].GameName];
+        //    }
+        //    else
+        //    {
+        //        return _gameSkins[_games[_currentGameIndex].GameName];
+        //    }
+        //}
+        //Ephinea
         public async Task<IEnumerable<Skin>> GetWebSkinsForSpecificSkinType(string skinTypeName)
         {
             KnownGameInfo? currentKnownGame = _knownGames.Single(x => x.GameName == _games[_currentGameIndex].GameName);
@@ -237,7 +269,7 @@ namespace SkinManager.Services
             if ((DateOnly.FromDateTime(DateTime.Now).DayNumber - _knownGames[knownGameIndex].SkinTypes[skinTypeIndex].LastOnlineCheck.DayNumber) > 1)
             {
                 using IServiceScope serviceScope = _scopeFactory.CreateScope();
-                PSOUniversePSWebAccessService webAccessService = serviceScope.ServiceProvider.GetRequiredService<PSOUniversePSWebAccessService>();
+                EphineaWebAccessService webAccessService = serviceScope.ServiceProvider.GetRequiredService<EphineaWebAccessService>();
                 webAccessService.SkinTypes = _games[_currentGameIndex].SkinTypes.DistinctBy(x => x.Name).ToList();
                 if (!_gameSkins.ContainsKey(_games[_currentGameIndex].GameName))
                 {

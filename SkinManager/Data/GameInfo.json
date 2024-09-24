@@ -1,0 +1,23 @@
+[
+  {
+    "GameName": "Phantasy Star Online BB",
+    "SkinsLocation": "D:\\SkinManagerTestFolder\\Texture Packs\\PSOBB",
+    "GameLocation": "D:\\SkinManagerTestFolder\\EphineaPSO",
+    "GameExecutable": "D:\\SkinManagerTestFolder\\EphineaPSO\\online.exe",
+    "AppliedSkins": []
+  },
+  {
+    "GameName": "New",
+    "SkinsLocation": "",
+    "GameLocation": "",
+    "GameExecutable": "",
+    "AppliedSkins": []
+  },
+  {
+    "GameName": "",
+    "SkinsLocation": "",
+    "GameLocation": "",
+    "GameExecutable": "",
+    "AppliedSkins": []
+  }
+]
