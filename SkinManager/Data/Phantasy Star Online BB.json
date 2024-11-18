@@ -14,9 +14,9 @@
       "Crater",
       "Desert",
       "Lobby",
-      "City",
-      "Temple",
-      "Spaceship",
+      "Pioneer 2",
+      "VR Temple",
+      "VR Spaceship",
       "Towers"
     ]
   },
@@ -26,15 +26,12 @@
       "Booma",
       "Gobooma",
       "Gigobooma",
-      "Booma Family",
       "Rappy",
       "Al Rappy",
-      "Rappy Family",
       "Monest",
       "Mothmant",
       "Savage Wolf",
       "Barbarouse Wolf",
-      "Wolf Family",
       "Hildebear",
       "Hildeblue",
       "Hidelt",
@@ -44,7 +41,6 @@
       "Evil Shark",
       "Pal Shark",
       "Guil Shark",
-      "Shark Family",
       "Poison Lily",
       "Nar Lily",
       "Grass Assassin",
@@ -65,7 +61,6 @@
       "Dimenian",
       "La Dimenian",
       "So Dimenian",
-      "Dimenian Family",
       "Claw",
       "Bulclaw",
       "Bulk",
@@ -141,7 +136,7 @@
     "Name": "Equipment",
     "SubTypes": [
       "Armor",
-      "Shield",
+      "Barrier",
       "Weapon",
       "Mag"
     ]
@@ -152,6 +147,45 @@
       "Attack",
       "Buff",
       "Healing",
+      "Other"
+    ]
+  },
+  {
+    "Name": "NPC",
+    "SubTypes": [
+      "Ninja",
+      "Rico",
+      "Sonic",
+      "Knuckles",
+      "Tails",
+      "Flowen",
+      "Elly",
+      "Momoka",
+      "Irene",
+      "Guild",
+      "Other"
+    ]
+  },
+  {
+    "Name": "Object",
+    "SubTypes": [
+      "Box",
+      "Chair",
+      "Blood",
+      "Other"
+    ]
+  },
+  {
+    "Name": "Other",
+    "SubTypes": [
+      "Font",
+      "Ending",
+      "Other"
+    ]
+  },
+  {
+    "Name": "Audio",
+    "SubTypes": [
       "Other"
     ]
   }

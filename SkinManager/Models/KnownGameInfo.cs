@@ -1,12 +1,16 @@
 ﻿using System.Collections.Generic;
 
-namespace SkinManager.Models
+namespace SkinManager.Models;
+
+public record KnownGameInfo(
+    string GameName,
+    string SkinsSiteName,
+    string SkinsSiteAddress,
+    List<SkinType> SkinTypes
+)
 {
-    public class KnownGameInfo
-    {
-        public string GameName { get; set; } = string.Empty;
-        public string SkinsSiteName { get; set; } = string.Empty;
-        public string SkinsSiteAddress { get; set; } = string.Empty;
-        public List<SkinType> SkinTypes { get; set; } = [];
-    }
+    public static KnownGameInfo Create(string gameName, string skinsSiteName, string skinsSiteAddress, List<SkinType> skinTypes) 
+    => new KnownGameInfo(gameName, skinsSiteName, skinsSiteAddress, skinTypes);
+
+    public override string ToString() => $"This is Known Game Info for {GameName}.";
 }

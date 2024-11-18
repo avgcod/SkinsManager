@@ -9,8 +9,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SkinManager.Models;
-using Avalonia.Controls;
-using System;
 using SkinManager.Services;
 using System.Net.Http;
 
@@ -21,7 +19,7 @@ namespace SkinManager
         //private const string _gameInfoFile = "GameInfo.json";
         //private const string _appliedSkinsFile = "AppliedSkins.json";
         //private const string _knownGamesFile = "KnownGames.json";
-        private IHost? host;
+        private IHost? _host;
 
         public override void Initialize()
         {
@@ -30,8 +28,8 @@ namespace SkinManager
 
         public override void OnFrameworkInitializationCompleted()
         {
-            host = CreateHostBuilder([]).Build();
-            host.Start();
+            _host = CreateHostBuilder([]).Build();
+            _host.Start();
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
@@ -39,8 +37,8 @@ namespace SkinManager
                 // Without this line you will get duplicate validations from both Avalonia and CT
                 BindingPlugins.DataValidators.RemoveAt(0);
 
-                desktop.MainWindow = host.Services.GetRequiredService<MainWindow>();
-                desktop.MainWindow.DataContext = host.Services.GetRequiredService<MainWindowViewModel>();
+                desktop.MainWindow = _host.Services.GetRequiredService<MainWindow>();
+                desktop.MainWindow.DataContext = _host.Services.GetRequiredService<MainWindowViewModel>();
                 desktop.Exit += Desktop_Exit;
             }
 
@@ -49,22 +47,22 @@ namespace SkinManager
 
         private async void Desktop_Exit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
         {
-            if (host is not null)
+            if (_host is not null)
             {
-                await host.StopAsync();
-                host.Dispose();
+                await _host.StopAsync();
+                _host.Dispose();
             }
         }
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
+        private static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
         .ConfigureAppConfiguration((hostBuilderContext, configurationBuilder)
             => configurationBuilder.AddUserSecrets(typeof(App).Assembly))
         .ConfigureServices((hostContext, services) =>
         {
-            services.AddSingleton<Locations>(new Locations("GameInfo.xml", "KnownGames.xml"));
+            services.AddSingleton(new Locations("GameInfo.json", "KnownGames.json"));
 
-            services.AddSingleton<HttpClient>(new HttpClient());
+            services.AddSingleton(new HttpClient());
 
             services.AddSingleton<FileAccessService>();
             services.AddSingleton<IFileAccessService, FileAccessService>(provider => provider.GetRequiredService<FileAccessService>());

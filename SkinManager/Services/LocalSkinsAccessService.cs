@@ -15,65 +15,139 @@ public class LocalSkinsAccessService(IMessenger theMessenger)
 {
     private readonly IMessenger _theMessenger = theMessenger;
 
-    public async Task<IEnumerable<Skin>> GetAvailableSkinsAsync(string skinsFolder)
+    public async Task<IEnumerable<SkinType>> GetAvailableSkinsTypesAsync(string skinsFolder)
     {
         try
         {
-            List<Skin> skins = [];
             if (await DirectoryExistsAsync(skinsFolder))
             {
-                DirectoryInfo rootDirectory = new(skinsFolder);
-                await Task.Run(() =>
-                {
-                    foreach (DirectoryInfo skinTypeDirectory in rootDirectory.GetDirectories())
-                    {
-                        foreach (DirectoryInfo subTypeDirectory in skinTypeDirectory.GetDirectories())
-                        {
-                            if (subTypeDirectory.Name != "Originals")
-                            {
-                                foreach (DirectoryInfo skinDirectory in subTypeDirectory.GetDirectories())
-                                {
-                                    Skin tempSkin = new()
-                                    {
-                                        Name = skinDirectory.Name,
-                                        CreationDate = DateOnly.FromDateTime(skinDirectory.CreationTime),
-                                        LastUpdatedDate = DateOnly.FromDateTime(skinDirectory.LastWriteTime),
-                                        Location = skinDirectory.FullName,
-                                        SkinType = new SkinType() { Name = subTypeDirectory.Parent?.Name ?? skinTypeDirectory.Name },
-                                        SubType = subTypeDirectory.Name
-                                    };
-
-                                    if (skinDirectory.Name.Contains("_by_"))
-                                    {
-                                        tempSkin.Name = skinDirectory.Name.Split("_by_")[1];
-                                        int authorStartIndex = skinDirectory.Name.IndexOf("_by_");
-                                        tempSkin.Description = $"{skinDirectory.Name} {subTypeDirectory.Name} skin {skinDirectory.Name.Remove(authorStartIndex)}.";
-                                    }
-                                    else
-                                    {
-                                        tempSkin.Description = $"{skinDirectory.Name} {subTypeDirectory.Name} skin {skinDirectory.Name}.";
-                                    }
-
-                                    string screenshotsFolder = Path.Combine(subTypeDirectory.FullName, "Screenshots");
-                                    if (Directory.Exists(screenshotsFolder))
-                                    {
-                                        tempSkin.Screenshots.AddRange(new DirectoryInfo(screenshotsFolder).GetFiles().Select(x => x.FullName));
-                                    }
-
-                                    skins.Add(tempSkin);
-                                }
-                            }
-                        }
-                    }
-                });
+                return await GetSkinTypes(skinsFolder);
             }
-            return skins;
+            else
+            {
+                return [];
+            }
         }
         catch (Exception ex)
         {
             _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-            return new List<Skin>();
+            return [];
         }
+    }
+    
+    public async Task<IEnumerable<Skin>> GetAvailableSkinsAsync(string skinsFolder, IEnumerable<SkinType> skinTypes)
+    {
+        try
+        {
+            if (await DirectoryExistsAsync(skinsFolder))
+            {
+                return await GetSkins(skinsFolder, skinTypes);
+            }
+            else
+            {
+                return [];
+            }
+        }
+        catch (Exception ex)
+        {
+            _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+            return [];
+        }
+    }
+
+    private async Task<IEnumerable<Skin>> GetSkins(string skinsFolder, IEnumerable<SkinType> skinTypes)
+    {
+        List<Skin> skins = [];
+        DirectoryInfo rootDirectory = new(skinsFolder);
+
+        foreach (DirectoryInfo skinTypeDirectory in rootDirectory.GetDirectories())
+        {
+            foreach (DirectoryInfo subTypeDirectory in skinTypeDirectory.GetDirectories()
+                         .Where(x => x.Name != "Originals"))
+            {
+                foreach (DirectoryInfo skinDirectory in subTypeDirectory.GetDirectories())
+                {
+                    string screenshotsFolder = Path.Combine(subTypeDirectory.FullName, "Screenshots");
+                    
+                    skins.Add(await CreateTempSkin(skinDirectory, subTypeDirectory, skinTypeDirectory,
+                        screenshotsFolder, skinTypeDirectory.Name, subTypeDirectory.Name));
+                }
+            }
+        }
+
+        return skins;
+    }
+
+    private async Task<Skin> CreateTempSkin(DirectoryInfo skinDirectory, DirectoryInfo subTypeDirectory,
+        DirectoryInfo skinTypeDirectory, string screenshotsFolder, string skinType, string subType)
+    {
+        List<string> screenshots = [..await GetScreenShots(screenshotsFolder)];
+        
+        (string Name, string Description, string Author) skinInfo =
+            GetSkinNameAndDescription(skinDirectory.Name, subTypeDirectory.Name);
+
+        DateOnly creationDate = DateOnly.FromDateTime(skinDirectory.CreationTime);
+        DateOnly lastUpdatedDate = DateOnly.FromDateTime(skinDirectory.LastWriteTime);
+
+        return Skin.Create(skinType, subType, skinInfo.Name, [skinDirectory.FullName], skinInfo.Author,
+            skinInfo.Description, creationDate, lastUpdatedDate, false, screenshots);
+    }
+
+    private async Task<IEnumerable<string>> GetScreenShots(string screenshotsFolder)
+    {
+        if (await DirectoryExistsAsync(screenshotsFolder))
+        {
+            return new DirectoryInfo(screenshotsFolder).GetFiles().Select(x => x.FullName);
+        }
+        else
+        {
+            return [];
+        }
+    }
+
+    private static (string name, string description, string author) GetSkinNameAndDescription(string skinDirectoryName, string subTypeDirectoryName)
+    {
+        if (skinDirectoryName.Contains("_by_", StringComparison.Ordinal))
+        {
+            int authorStartIndex = skinDirectoryName.IndexOf("_by_", StringComparison.Ordinal);
+            
+            string name = skinDirectoryName.Split("_by_")[1];
+            string description =
+                $"{skinDirectoryName} {subTypeDirectoryName} skin {skinDirectoryName.Remove(authorStartIndex)}.";
+            string author = skinDirectoryName.Split("_by_").Last();
+            
+            return (name, description, author);
+        }
+        else
+        {
+            string description = $"{skinDirectoryName} {subTypeDirectoryName} skin {skinDirectoryName}.";
+            return (skinDirectoryName, description, "Unknown");
+        }
+    }
+
+    private static async Task<IEnumerable<SkinType>> GetSkinTypes(string skinsFolder)
+    {
+        DirectoryInfo rootDirectory = new(skinsFolder);
+        List<SkinType> skinTypes = [];
+        DateOnly currentDate = DateOnly.FromDateTime(DateTime.Now);
+
+        await Task.Run(() =>
+        {
+            foreach (DirectoryInfo skinTypeDirectory in rootDirectory.GetDirectories())
+            {
+                List<string> skinSubTypes = [];
+                foreach (DirectoryInfo subTypeDirectory in skinTypeDirectory.GetDirectories()
+                             .Where(x => x.Name != "Originals"))
+                {
+                    skinSubTypes.Add(subTypeDirectory.Name);
+                }
+
+                skinTypes.Add(
+                    SkinType.Create(skinTypeDirectory.Name, skinSubTypes, currentDate));
+            }
+        });
+        
+        return skinTypes;
     }
 
     /// <summary>

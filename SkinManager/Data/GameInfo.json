@@ -1,20 +1,211 @@
 [
   {
     "GameName": "Phantasy Star Online BB",
-    "SkinsLocation": "D:\\SkinManagerTestFolder\\Texture Packs\\PSOBB",
-    "GameLocation": "D:\\SkinManagerTestFolder\\EphineaPSO",
-    "GameExecutable": "D:\\SkinManagerTestFolder\\EphineaPSO\\online.exe",
-    "AppliedSkins": []
+    "SkinsLocation": "/home/sage/ArcadiaShare/Games/Sega/Texture Packs/Phantasy Star Online BB",
+    "GameLocation": "/home/sage/Games/phantasy-star-online-blue-burst/drive_c/EphineaPSO",
+    "GameExecutable": "/home/sage/Games/phantasy-star-online-blue-burst/drive_c/EphineaPSO/online.exe",
+    "AppliedSkins": [],
+    "SkinTypes": [
+      {
+        "Name": "Area",
+        "SubTypes": [
+          "Forest",
+          "Caves",
+          "Mines",
+          "Ruins",
+          "Jungle",
+          "Mountain",
+          "Seaside",
+          "CCA",
+          "Seabed",
+          "Crater",
+          "Desert",
+          "Lobby",
+          "Pioneer 2",
+          "VR Temple",
+          "VR Spaceship",
+          "Towers"
+        ]
+      },
+      {
+        "Name": "Enemy",
+        "SubTypes": [
+          "Booma",
+          "Gobooma",
+          "Gigobooma",
+          "Rappy",
+          "Al Rappy",
+          "Monest",
+          "Mothmant",
+          "Savage Wolf",
+          "Barbarouse Wolf",
+          "Hildebear",
+          "Hildeblue",
+          "Hidelt",
+          "Hildetorr",
+          "Dargon",
+          "Sil Dragon",
+          "Evil Shark",
+          "Pal Shark",
+          "Guil Shark",
+          "Poison Lily",
+          "Nar Lily",
+          "Grass Assassin",
+          "Nano Dragon",
+          "Pan Arms",
+          "Hiddom",
+          "Migium",
+          "DelRoLe",
+          "DelRalLie",
+          "Gilchic",
+          "Dubchic",
+          "Canadine",
+          "Canane",
+          "Sinow Beat",
+          "Sinow Gold",
+          "Garanz",
+          "Vol Opt",
+          "Dimenian",
+          "La Dimenian",
+          "So Dimenian",
+          "Claw",
+          "Bulclaw",
+          "Bulk",
+          "Delsaber",
+          "Dark Belra",
+          "Chaos Sorcerer",
+          "Dark Gunner",
+          "Chaos Bringer",
+          "Dark Falz",
+          "Merillia",
+          "Meritas",
+          "Mericarol",
+          "Ul Gibbon",
+          "Zol Gibbon",
+          "Gibbles",
+          "Gee",
+          "Gi Gue",
+          "Sinow Berril",
+          "Sinow Spigell",
+          "Gol Dragon",
+          "Gal Gryphon",
+          "Domolm",
+          "Dolmdari",
+          "Recon",
+          "Reconbox",
+          "Sinow Zoa",
+          "Sinow Zele",
+          "Morfos",
+          "Deldepth",
+          "Delbiter",
+          "Epsilon",
+          "Olga Flow",
+          "Sand Rappy",
+          "Del Rappy",
+          "Girtablublu",
+          "Goran",
+          "Pyro Goran",
+          "Goran Detonator",
+          "Merissa A",
+          "Merissa AA",
+          "Zu",
+          "Pazuzu",
+          "Satellite Lizard",
+          "Yowie"
+        ]
+      },
+      {
+        "Name": "Class",
+        "SubTypes": [
+          "Humar",
+          "Hucast",
+          "Hunewearl",
+          "Hucaseal",
+          "Fomar",
+          "Fomarl",
+          "Fonewearl",
+          "Ramar",
+          "Racast",
+          "Ramarl",
+          "Racaseal"
+        ]
+      },
+      {
+        "Name": "UI",
+        "SubTypes": [
+          "HUD",
+          "Title",
+          "Audio",
+          "Box"
+        ]
+      },
+      {
+        "Name": "Equipment",
+        "SubTypes": [
+          "Armor",
+          "Barrier",
+          "Weapon",
+          "Mag"
+        ]
+      },
+      {
+        "Name": "Effect",
+        "SubTypes": [
+          "Attack",
+          "Buff",
+          "Healing",
+          "Other"
+        ]
+      },
+      {
+        "Name": "NPC",
+        "SubTypes": [
+          "Ninja",
+          "Rico",
+          "Sonic",
+          "Knuckles",
+          "Tails",
+          "Flowen",
+          "Elly",
+          "Momoka",
+          "Irene",
+          "Guild",
+          "Other"
+        ]
+      },
+      {
+        "Name": "Object",
+        "SubTypes": [
+          "Box",
+          "Chair",
+          "Blood",
+          "Other"
+        ]
+      },
+      {
+        "Name": "Other",
+        "SubTypes": [
+          "Font",
+          "Ending",
+          "Other"
+        ]
+      },
+      {
+        "Name": "Audio",
+        "SubTypes": [
+          "Other"
+        ]
+      },
+      {
+        "Name": "Unitxt",
+        "SubTypes": [
+          "Other"
+        ]
+      }
+    ]
   },
   {
     "GameName": "New",
-    "SkinsLocation": "",
-    "GameLocation": "",
-    "GameExecutable": "",
-    "AppliedSkins": []
-  },
-  {
-    "GameName": "",
     "SkinsLocation": "",
     "GameLocation": "",
     "GameExecutable": "",

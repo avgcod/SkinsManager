@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 
@@ -319,20 +320,19 @@ namespace SkinManager.Services
                 return false;
             }
         }
-        public Dictionary<string, List<Skin>> LoadCachedWebSkins(IEnumerable<string> gameNames)
+        public async Task<Dictionary<string, List<Skin>>> LoadCachedWebSkins(IEnumerable<string> gameNames)
         {
             Dictionary<string, List<Skin>> gameWebSkins = [];
             try
             {
                 foreach (string gameName in gameNames)
                 {
-                    string fileName = gameName + " Skins.xml";
+                    string fileName = gameName + " Skins.json";
                     if (File.Exists(fileName))
                     {
-                        using Stream fileStream = File.OpenRead(fileName);
-                        XmlSerializer theSerializer = new(typeof(List<Skin>));
-                        List<Skin> foundSkins = theSerializer.Deserialize(fileStream) as List<Skin> ?? [];
-                        gameWebSkins.Add(gameName, foundSkins);
+                        await using Stream fileStream = File.OpenRead(fileName);
+                        IEnumerable<Skin> foundSkins = await JsonSerializer.DeserializeAsync<IEnumerable<Skin>>(fileStream) ?? [];
+                        gameWebSkins.Add(gameName, [..foundSkins]);
                     }
                 }
                 return gameWebSkins;
@@ -460,34 +460,14 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="gameInfoFileName">File to load.</param>
         /// <returns>Collection of GameInfo.</returns>
-        public IEnumerable<GameInfo> LoadGameInfo(string gameInfoFileName)
+        public async Task<IEnumerable<GameInfo>> LoadGameInfo(string gameInfoFileName)
         {
-            /*
-             * List<string> directories = new List<string>();
-            if (File.Exists(directoriesFile))
-            {
-                using (XmlReader theReader = XmlReader.Create(directoriesFile))
-                {
-                    string directoryLocation = string.Empty;
-
-                    theReader.ReadToFollowing("SkinsLocation");
-                    directoryLocation = theReader.ReadElementContentAsString("SkinsLocation", "");
-                    directories.Add(directoryLocation);
-
-                    theReader.ReadToFollowing("InstallLocation");
-                    directoryLocation = theReader.ReadElementContentAsString("InstallLocation", "");
-                    directories.Add(directoryLocation);
-                }
-            }
-            return directories;
-             */
             try
             {
                 if (File.Exists(gameInfoFileName))
                 {
-                    using Stream fileStream = File.OpenRead(gameInfoFileName);
-                    XmlSerializer theSerializer = new(typeof(List<GameInfo>));
-                    return theSerializer.Deserialize(File.OpenRead(gameInfoFileName)) as List<GameInfo> ?? [];
+                    await using Stream fileStream = File.OpenRead(gameInfoFileName);
+                    return await JsonSerializer.DeserializeAsync<IEnumerable<GameInfo>>(fileStream) ?? [];
                 }
                 else
                 {
@@ -500,58 +480,38 @@ namespace SkinManager.Services
                 return [];
             }
         }
+        
         /// <summary>
         /// Saves a collection of GameInfo to a file.
         /// </summary>
         /// <param name="gameInfo">Collection of GameInfo to save.</param>
         /// <param name="gameInfoFileName">File to save to.</param>
-        public void SaveGameInfo(IEnumerable<GameInfo> gameInfo, string gameInfoFileName)
+        public async Task SaveGameInfo(IEnumerable<GameInfo> gameInfo, string gameInfoFileName)
         {
             try
             {
-                XmlSerializer theSerializer = new(gameInfo.GetType());
-                using TextWriter writer = new StreamWriter(gameInfoFileName);
-                theSerializer.Serialize(writer, gameInfo);
-                writer.Close();
+                await using Stream fileStream = File.OpenWrite(gameInfoFileName);
+                await JsonSerializer.SerializeAsync<IEnumerable<GameInfo>>(fileStream,gameInfo);
             }
             catch (Exception ex)
             {
                 _theMessenger.Send<OperationErrorMessage>(new OperationErrorMessage(ex.GetType().Name, ex.Message));
             }
         }
+        
         /// <summary>
         /// Loads the KnownGameInfo to prepopulate skin type and web skins resource.
         /// </summary>
         /// <param name="knownGameInfoFileName">File of the known game info.</param>
         /// <returns>Collection of KnownGameInfo.</returns>
-        public IEnumerable<KnownGameInfo> LoadKnownGamesInfo(string knownGameInfoFileName)
+        public async Task<IEnumerable<KnownGameInfo>> LoadKnownGamesInfo(string knownGameInfoFileName)
         {
-            /*
-             * List<string> directories = new List<string>();
-            if (File.Exists(directoriesFile))
-            {
-                using (XmlReader theReader = XmlReader.Create(directoriesFile))
-                {
-                    string directoryLocation = string.Empty;
-
-                    theReader.ReadToFollowing("SkinsLocation");
-                    directoryLocation = theReader.ReadElementContentAsString("SkinsLocation", "");
-                    directories.Add(directoryLocation);
-
-                    theReader.ReadToFollowing("InstallLocation");
-                    directoryLocation = theReader.ReadElementContentAsString("InstallLocation", "");
-                    directories.Add(directoryLocation);
-                }
-            }
-            return directories;
-             */
             try
             {
                 if (File.Exists(knownGameInfoFileName))
                 {
-                    using Stream fileStream = File.OpenRead(knownGameInfoFileName);
-                    XmlSerializer theSerializer = new(typeof(List<KnownGameInfo>));
-                    return theSerializer.Deserialize(File.OpenRead(knownGameInfoFileName)) as List<KnownGameInfo> ?? [];
+                    await using Stream fileStream = File.OpenRead(knownGameInfoFileName);
+                    return await JsonSerializer.DeserializeAsync<IEnumerable<KnownGameInfo>>(fileStream) ?? [];
                 }
                 else
                 {
@@ -564,19 +524,18 @@ namespace SkinManager.Services
                 return [];
             }
         }
+        
         /// <summary>
         /// Saves a collection of KnownGameInfo to a file.
         /// </summary>
         /// <param name="knownGamesList">The collection of KnownGameInfo.</param>
         /// <param name="fileName">File to save to.</param>
-        public void SaveKnownGamesList(IEnumerable<KnownGameInfo> knownGamesList, string fileName)
+        public async Task SaveKnownGamesList(IEnumerable<KnownGameInfo> knownGamesList, string fileName)
         {
             try
             {
-                XmlSerializer theSerializer = new(knownGamesList.GetType());
-                using TextWriter writer = new StreamWriter(fileName);
-                theSerializer.Serialize(writer, knownGamesList);
-                writer.Close();
+                await using Stream fileStream = File.OpenWrite(fileName);
+                await JsonSerializer.SerializeAsync<IEnumerable<KnownGameInfo>>(fileStream,knownGamesList);
             }
             catch (Exception ex)
             {
@@ -584,7 +543,7 @@ namespace SkinManager.Services
             }
         }
 
-        public Dictionary<string, List<Skin>> LoadWebSkins(IEnumerable<string> gameNames)
+        public async Task<Dictionary<string, List<Skin>>> LoadWebSkins(IEnumerable<string> gameNames)
         {
             Dictionary<string, List<Skin>> gameWebSkins = [];
             try
@@ -594,10 +553,9 @@ namespace SkinManager.Services
                     string fileName = gameName + " Skins.xml";
                     if (File.Exists(fileName))
                     {
-                        using Stream fileStream = File.OpenRead(fileName);
-                        XmlSerializer theSerializer = new(typeof(List<Skin>));
-                        List<Skin> foundSkins = theSerializer.Deserialize(fileStream) as List<Skin> ?? [];
-                        gameWebSkins.Add(gameName, foundSkins);
+                        await using Stream fileStream = File.OpenRead(fileName);
+                        IEnumerable<Skin> foundSkins = await JsonSerializer.DeserializeAsync<IEnumerable<Skin>>(fileStream) ?? [];
+                        gameWebSkins.Add(gameName, [..foundSkins]);
                     }
                 }
                 return gameWebSkins;
@@ -609,16 +567,15 @@ namespace SkinManager.Services
             }
         }
 
-        public void SaveWebSkinsList(Dictionary<string, List<Skin>> webSkins)
+        public async Task SaveWebSkinsList(Dictionary<string, List<Skin>> webSkins)
         {
             try
             {
                 foreach (string currentGameName in webSkins.Keys)
                 {
-                    XmlSerializer theSerializer = new(webSkins[currentGameName].GetType());
-                    using TextWriter writer = new StreamWriter($"{currentGameName} Skins.xml");
-                    theSerializer.Serialize(writer, webSkins[currentGameName]);
-                    writer.Close();
+                    string fileName = $"{currentGameName} Skins.json";
+                    await using Stream fileStream = File.OpenWrite(fileName);
+                    await JsonSerializer.SerializeAsync<IEnumerable<Skin>>(fileStream,webSkins[currentGameName]);
                 }
             }
             catch (Exception ex)

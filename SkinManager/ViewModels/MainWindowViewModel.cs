@@ -17,6 +17,7 @@ using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using SkinManager.Extensions;
 
 namespace SkinManager.ViewModels
 {
@@ -39,7 +40,7 @@ namespace SkinManager.ViewModels
         public ObservableCollection<string> AvailableSkinNames { get; set; } = [];
         public ObservableCollection<string> OriginalSkinNames { get; set; } = [];
         private ObservableCollection<Skin> AppliedSkins { get; set; } = [];
-        private ObservableCollection<string> GamesList { get; set; } = [];
+        public ObservableCollection<string> GamesList { get; set; } = [];
         #endregion
 
         #region Properties
@@ -56,7 +57,7 @@ namespace SkinManager.ViewModels
         public bool GameIsKnown => SelectedGameIsKnown();
         [ObservableProperty]
         private SkinsSource _selectedSource = SkinsSource.Local;
-        public string SelectedSkinLocation => _skins.SingleOrDefault(x => x.Name == SelectedSkinName)?.Location ?? string.Empty;
+        public IEnumerable<string> SelectedSkinLocation => _skins.SingleOrDefault(x => x.Name == SelectedSkinName)?.Locations ?? [];
         [ObservableProperty]
         private string _appliedSkinName = string.Empty;
         public string BackUpLocation => Path.Combine(SkinsLocation, SelectedSkinTypeName, "Originals", SelectedSkinSubType);
@@ -124,10 +125,15 @@ namespace SkinManager.ViewModels
             Messenger.RegisterAll(this);
         }
 
-        private void WindowLoaded(object? sender, RoutedEventArgs e)
+        private async void WindowLoaded(object? sender, RoutedEventArgs e)
         {
-            _skinsAccessService.LoadGamesInformation();
-            GamesList = new(_skinsAccessService.GetGameNames());
+            await _skinsAccessService.LoadGamesInformation();
+            GamesList.Clear();
+
+            foreach (string currentGameName in _skinsAccessService.GetGameNames())
+            {
+                GamesList.Add(currentGameName);
+            }
             if (GamesList.Count == 1)
             {
                 SelectedGameName = GamesList[0];
@@ -243,7 +249,7 @@ namespace SkinManager.ViewModels
             }
 
             SkinSubTypes.Clear();
-            foreach (string currentSubType in _skins.Where(x => x.SkinType.Name == SelectedSkinTypeName).Select(x => x.SubType).Distinct())
+            foreach (string currentSubType in _skins.Where(x => x.SkinType == SelectedSkinTypeName).Select(x => x.SubType).Distinct())
             {
                 SkinSubTypes.Add(currentSubType);
             }
@@ -267,7 +273,8 @@ namespace SkinManager.ViewModels
         private void RefreshAvailableSkinNames()
         {
             AvailableSkinNames.Clear();
-            foreach (string currentSkinName in _skins.Where(x => x.SkinType.Name == SelectedSkinTypeName && x.SubType == SelectedSkinSubType).Select(x => x.Name))
+            
+            foreach (string currentSkinName in _skins.Where(x => x.SkinType == SelectedSkinTypeName && x.SubType == SelectedSkinSubType).Select(x => x.Name))
             {
                 AvailableSkinNames.Add(currentSkinName);
             }
@@ -283,10 +290,12 @@ namespace SkinManager.ViewModels
                 GameExecutableLocation = _skinsAccessService.GetGameExecutableLocation();
                 await LoadSkinsAsync();
                 SkinTypeNames.Clear();
-                foreach (string skinTypeName in _skins.Select(x => x.SkinType).DistinctBy(x => x.Name).OrderBy(x => x.Name).Select(x => x.Name))
+
+                foreach (string currentSkinTypeName in _skins.Select(x => x.SkinType).Distinct().Order())
                 {
-                    SkinTypeNames.Add(skinTypeName);
+                    SkinTypeNames.Add(currentSkinTypeName);
                 }
+                
                 SelectedSkinTypeName = SkinTypeNames[0];
 
                 if (_currentWindow.Find<ComboBox>("skinsSourceCbx") is { } skinsSourceCbx)
@@ -301,6 +310,7 @@ namespace SkinManager.ViewModels
             Busy = true;
 
             _skinsAccessService.SetSkinsSource(SelectedSource);
+            
             IEnumerable<SkinType> skinTypes = [];
 
             if (SelectedSource == SkinsSource.Local)
@@ -312,11 +322,13 @@ namespace SkinManager.ViewModels
                 if (string.IsNullOrEmpty(SelectedSkinTypeName))
                 {
                     skinTypes = _skinsAccessService.GetSkinTypesForWeb();
-                    _skins.AddRange(await _skinsAccessService.GetWebSkinsForSpecificSkinType(skinTypes.First().Name));
+                    _skins.AddRange(await _skinsAccessService.GetWebSkinsForSpecificSkinType(skinTypes.First()));
                 }
                 else
                 {
-                    _skins.AddRange(await _skinsAccessService.GetWebSkinsForSpecificSkinType(SelectedSkinTypeName));
+                    SkinType currentSkinType = _skinsAccessService.GetAvailableSkinTypes().Single(x => x.Name == SelectedSkinTypeName);
+                    //TODO:Do not add duplicates.
+                    _skins.AddRange(await _skinsAccessService.GetWebSkinsForSpecificSkinType(currentSkinType));
                 }
             }
 
@@ -377,14 +389,14 @@ namespace SkinManager.ViewModels
             if (SelectedSource == SkinsSource.Local && !_webSkinSelected)
             {
                 ProcessingText = "Applying skin. Please wait.";
-                await _fileAccessService.ApplySkinAsync(SelectedSkinLocation, GameLocation);
+                await _fileAccessService.ApplySkinAsync(SelectedSkinLocation.First(), GameLocation);
                 AddAppliedSkin(SelectedSkinName);
             }
             else
             {
                 ProcessingText = "Downloading skin. Please wait.";
-                Skin skinToDownload = _skins.SingleOrDefault(x => x.Name == SelectedSkinName) ?? new();
-                if (await _skinsAccessService.DownloadSkin(skinToDownload, SkinsLocation))
+                Skin skinToDownload = _skins.Single(x => x.Name == SelectedSkinName);
+                if (await _skinsAccessService.DownloadSkin(skinToDownload, SkinsLocation, 0))
                 {
                     using (IServiceScope serviceScope = _scopeFactory.CreateScope())
                     {
@@ -431,7 +443,7 @@ namespace SkinManager.ViewModels
             Busy = true;
 
             ProcessingText = "Creating backup. Please wait.";
-            await _fileAccessService.CreateBackUpAsync(SelectedSkinLocation, BackUpLocation, GameLocation);
+            await _fileAccessService.CreateBackUpAsync(SelectedSkinLocation.First(), BackUpLocation, GameLocation);
 
             Busy = false;
         }
@@ -472,7 +484,8 @@ namespace SkinManager.ViewModels
             Busy = true;
 
             ProcessingText = "Creating folder structure. Please wait.";
-            await _fileAccessService.CreateStructureAsync(_skins.Select(x => x.SkinType).DistinctBy(x => x.Name), SkinsLocation);
+            //await _fileAccessService.CreateStructureAsync(_skins.Select(x => x.SkinType).DistinctBy(x => x.Name), SkinsLocation);
+            await _fileAccessService.CreateStructureAsync(_skinsAccessService.GetAvailableSkinTypes(), SkinsLocation);
 
             StructureCreated = true;
 
@@ -530,7 +543,6 @@ namespace SkinManager.ViewModels
         {
             await HandleDirectoryNotEmptyMessageAsync(message);
         }
-
         private async Task HandleDirectoryNotEmptyMessageAsync(DirectoryNotEmptyMessage message)
         {
             using IServiceScope serviceScope = _scopeFactory.CreateScope();
@@ -549,7 +561,8 @@ namespace SkinManager.ViewModels
             }
             else
             {
-                _skinsAccessService.AddGame(new GameInfo() { GameName = message.NewGameName });
+                _skinsAccessService.AddGame(GameInfo.Create(message.NewGameName, SkinsLocation, GameLocation
+                    , GameExecutableLocation, [], []));
                 GamesList.Add(message.NewGameName);
                 SelectedGameName = GamesList[^1];
             }
@@ -577,6 +590,7 @@ namespace SkinManager.ViewModels
                 _skins.Clear();
                 ProcessingText = "Fetching skins from the website. Please wait.";
             }
+            
             await LoadSkinsAsync();
         }
 

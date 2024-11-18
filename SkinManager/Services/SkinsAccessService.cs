@@ -5,11 +5,17 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices.JavaScript;
 using System.Threading.Tasks;
+using SkinManager.Extensions;
 
 namespace SkinManager.Services
 {
-    public class SkinsAccessService(IServiceScopeFactory scopeFactory, IFileAccessService fileAccessService, HttpClient httplCient, Locations locations) : ISkinsAccessService
+    public class SkinsAccessService(
+        IServiceScopeFactory scopeFactory,
+        IFileAccessService fileAccessService,
+        HttpClient httplCient,
+        Locations locations) : ISkinsAccessService
     {
         private readonly Locations _locations = locations;
         private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
@@ -28,42 +34,58 @@ namespace SkinManager.Services
                 _games[_currentGameIndex].AppliedSkins.Add(appliedSkinName);
             }
         }
+
         private void AddCachedGameWebSkins(Dictionary<string, List<Skin>> webSkins)
         {
             foreach (KeyValuePair<string, List<Skin>> currentPair in webSkins)
             {
                 foreach (Skin currentSkin in currentPair.Value)
                 {
-                    if (!_gameSkins[currentPair.Key].Any(x => x.Name.Equals(currentSkin.Name, StringComparison.OrdinalIgnoreCase)))
+                    if (!_gameSkins[currentPair.Key]
+                            .Any(x => x.Name.Equals(currentSkin.Name, StringComparison.OrdinalIgnoreCase)))
                     {
                         _gameSkins[currentPair.Key].Add(currentSkin);
                     }
                 }
             }
         }
+
         public void AddGame(GameInfo currentGame)
         {
-            currentGame.SkinTypes = PopulateDefaultSkinTypes();
-            _games.Add(currentGame);
+            var newGame = currentGame.With(("SkinTypes", PopulateDefaultSkinTypes()));
+            
+            if (newGame is Something<GameInfo> something)
+            {
+                _games.Add(something.Value);
+            }
         }
 
-        public async Task<bool> DownloadSkin(Skin skinToDownload, string skinsFolder)
+        public async Task<bool> DownloadSkin(Skin skinToDownload, string skinsFolder, int downloadLink)
         {
             if (_knownGames.Any(x => x.GameName == _games[_currentGameIndex].GameName))
             {
                 if (_games[_currentGameIndex].GameName == "Phantasy Star Online BB")
                 {
                     using IServiceScope serviceScope = _scopeFactory.CreateScope();
-                    PSOUniversePSWebAccessService skinsAccessService = serviceScope.ServiceProvider.GetRequiredService<PSOUniversePSWebAccessService>();
+                    
+                    EphineaWebAccessService skinsAccessService =
+                        serviceScope.ServiceProvider.GetRequiredService<EphineaWebAccessService>();
 
                     try
                     {
-                        HttpResponseMessage response = await _httpClient.GetAsync(skinToDownload.Location);
-                        string fileExtension = response.RequestMessage?.RequestUri?.OriginalString.Split('.').Last() ?? string.Empty;
+                        HttpResponseMessage response = await _httpClient.GetAsync(skinToDownload.Locations[downloadLink]);
+                        
+                        string fileExtension = response.RequestMessage?.RequestUri?.OriginalString.Split('.').Last() ??
+                                               string.Empty;
+                        
                         string filePath = Path.Combine(skinsFolder, $"{skinToDownload.Name}.{fileExtension}");
-                        await using Stream webStream = await _httpClient.GetStreamAsync(skinToDownload.Location);
+                        
+                        await using Stream webStream = await _httpClient.GetStreamAsync(skinToDownload.Locations[downloadLink]);
+                        
                         await using Stream skinFileStream = File.Create(filePath);
+                        
                         await webStream.CopyToAsync(skinFileStream);
+                        
                         return true;
                     }
                     catch
@@ -72,39 +94,43 @@ namespace SkinManager.Services
                     }
                 }
             }
+
             return false;
         }
 
         #region Get Methods
+
         private async Task<IEnumerable<Skin>> GetAllWebSkins()
         {
-            KnownGameInfo? currentKnownGame = _knownGames.SingleOrDefault(x => x.GameName == _games[_currentGameIndex].GameName);
-            DateOnly currentDate = DateOnly.FromDateTime(DateTime.Now);
-            if (currentKnownGame is not null)
+            if (_knownGames.SingleOrDefault(x => x.GameName == _games[_currentGameIndex].GameName) is
+                { } currentKnownGame)
             {
                 if (_games[_currentGameIndex].GameName == "Phantasy Star Online BB")
                 {
                     using IServiceScope serviceScope = _scopeFactory.CreateScope();
-                    PSOUniversePSWebAccessService webAccessService = serviceScope.ServiceProvider.GetRequiredService<PSOUniversePSWebAccessService>();
-                    webAccessService.SkinTypes = _games[_currentGameIndex].SkinTypes;
-                    if (!_gameSkins.ContainsKey(_games[_currentGameIndex].GameName))
+
+                    var webAccessService =
+                        serviceScope.ServiceProvider.GetRequiredService<EphineaWebAccessService>();
+
+                    AddGameToGameSkinsIfMissing();
+
+                    AddGameSkinsIfMissing(await webAccessService.GetAvailableSkinsAsync(currentKnownGame.SkinTypes));
+                    
+                    _knownGames.Remove(currentKnownGame);
+                    
+                    List<SkinType> newSkinTypes = [];
+                    
+                    foreach (SkinType skinType in currentKnownGame.SkinTypes)
                     {
-                        _gameSkins.Add(_games[_currentGameIndex].GameName, []);
+                        newSkinTypes.Add(skinType with {LastOnlineCheck = DateOnly.FromDateTime(DateTime.Now)});
+                        
                     }
-                    foreach (Skin currentSkin in await webAccessService.GetAvailableSkinsAsync())
-                    {
-                        if (!_gameSkins[_games[_currentGameIndex].GameName].Any(x => x.Name == currentSkin.Name))
-                        {
-                            _gameSkins[_games[_currentGameIndex].GameName].Add(currentSkin);
-                        }
-                    }
-                    int knownGameIndex = _knownGames.FindIndex(x => x.GameName == currentKnownGame.GameName);
-                    for (int i = 0; i < _knownGames[knownGameIndex].SkinTypes.Count; i++)
-                    {
-                        _knownGames[knownGameIndex].SkinTypes[i].LastOnlineCheck = DateOnly.FromDateTime(DateTime.Now);
-                    }
+                    
+                    _knownGames.Add(currentKnownGame with { SkinTypes = newSkinTypes });
+                    
                     return _gameSkins[_games[_currentGameIndex].GameName];
                 }
+
                 return [];
             }
             else
@@ -112,18 +138,51 @@ namespace SkinManager.Services
                 return [];
             }
         }
+
+        private void AddGameSkinsIfMissing(IEnumerable<Skin> skins)
+        {
+            if (_gameSkins.Count == 0)
+            {
+                _gameSkins[_games[_currentGameIndex].GameName].AddRange(skins);
+            }
+            else
+            {
+                foreach (Skin currentSkin in skins)
+                {
+                    if (!_gameSkins[_games[_currentGameIndex].GameName].Exists(x => x.Name == currentSkin.Name))
+                    {
+                        _gameSkins[_games[_currentGameIndex].GameName].Add(currentSkin);
+                    }
+                } 
+            }
+        }
+
+        private void AddGameToGameSkinsIfMissing()
+        {
+            if (!_gameSkins.ContainsKey(_games[_currentGameIndex].GameName))
+            {
+                _gameSkins.Add(_games[_currentGameIndex].GameName, []);
+            }
+        }
+
         public string GetAppliedSkinNameFromLocation(string selectedSkinTypeName, string selectedSkinSubTypeName)
         {
             foreach (string skinLocation in _games[_currentGameIndex].AppliedSkins)
             {
-                Skin? foundSkin = _gameSkins[_games[_currentGameIndex].GameName].SingleOrDefault(x => x.Location == skinLocation);
-                if (foundSkin?.SkinType.Name == selectedSkinTypeName && foundSkin?.SubType == selectedSkinSubTypeName)
+                var possibleSkin = (_gameSkins[_games[_currentGameIndex].GameName]
+                    .SingleOrDefault(x => x.Locations.Contains(skinLocation))) is { } foundSkinLocation
+                    ? Something<Skin>.Create(foundSkinLocation)
+                    : Nothing<Skin>.Create();
+
+                if (possibleSkin is Something<Skin> foundSkin && foundSkin.Value.Name == selectedSkinTypeName && foundSkin.Value.SubType == selectedSkinSubTypeName)
                 {
-                    return foundSkin.Name;
+                    return foundSkin.Value.Name;
                 }
             }
+
             return "None";
         }
+
         public async Task<IEnumerable<Skin>> GetAvailableSkinsAsync()
         {
             if (_skinsSource == SkinsSource.Local)
@@ -139,40 +198,49 @@ namespace SkinManager.Services
         public Dictionary<string, List<Skin>> GetCachedWebSkins()
         {
             Dictionary<string, List<Skin>> cachedWebSkins = [];
+            
             foreach (KeyValuePair<string, List<Skin>> currentPair in _gameSkins)
             {
                 cachedWebSkins.Add(currentPair.Key, currentPair.Value.Where(x => x.IsWebSkin).ToList());
             }
+
             return _gameSkins;
         }
+
         public IEnumerable<string> GetAvailableSkinNames(string selectedSkinTypeName, string selectedSkinSubTypeName)
         {
-            foreach (string currentSkinName in _gameSkins[_games[_currentGameIndex].GameName].Where(x => x.SkinType.Name == selectedSkinTypeName
-            && x.SubType == selectedSkinSubTypeName).Select(x => x.Name))
+            foreach (string currentSkinName in _gameSkins[_games[_currentGameIndex].GameName].Where(x =>
+                         x.SkinType == selectedSkinTypeName
+                         && x.SubType == selectedSkinSubTypeName).Select(x => x.Name))
             {
                 yield return currentSkinName;
             }
         }
+
         public IEnumerable<SkinType> GetAvailableSkinTypes()
         {
             return _games[_currentGameIndex].SkinTypes.DistinctBy(x => x.Name);
         }
+
         public IEnumerable<GameInfo> GetGamesCollection()
         {
             return _games;
         }
+
         public string GetGameExecutableLocation()
         {
             return _games[_currentGameIndex].GameExecutable;
         }
+
         public string GetGameLocation()
         {
             return _games[_currentGameIndex].GameLocation;
         }
+
         public IEnumerable<string> GetGameNames()
         {
-            List<string> games = [];
-            games.AddRange(_games.Select(x => x.GameName));
+            List<string> games = [.._games.Select(x => x.GameName)];
+            
             foreach (KnownGameInfo currentKnownGame in _knownGames)
             {
                 if (!games.Contains(currentKnownGame.GameName))
@@ -180,12 +248,15 @@ namespace SkinManager.Services
                     games.Add(currentKnownGame.GameName);
                 }
             }
+
             return games;
         }
+
         public IEnumerable<KnownGameInfo> GetKnownGames()
         {
             return _knownGames;
         }
+
         private async Task<IEnumerable<Skin>> GetLocalSkins()
         {
             if (!_gameSkins.ContainsKey(_games[_currentGameIndex].GameName))
@@ -194,30 +265,35 @@ namespace SkinManager.Services
             }
 
             using IServiceScope serviceScope = _scopeFactory.CreateScope();
-            LocalSkinsAccessService skinsAccessService = serviceScope.ServiceProvider.GetRequiredService<LocalSkinsAccessService>();
-            foreach (Skin currentSkin in await skinsAccessService.GetAvailableSkinsAsync(_games[_currentGameIndex].SkinsLocation))
-            {
-                if (!_gameSkins[_games[_currentGameIndex].GameName].Any(x => x.Name == currentSkin.Name))
-                {
-                    _gameSkins[_games[_currentGameIndex].GameName].Add(currentSkin);
-                }
-            }
+            
+            LocalSkinsAccessService skinsAccessService =
+                
+                serviceScope.ServiceProvider.GetRequiredService<LocalSkinsAccessService>();
 
-            AddCachedGameWebSkins(_fileAccessService.LoadCachedWebSkins(_knownGames.Select(x => x.GameName)));
+            IEnumerable<Skin> skins = await skinsAccessService.GetAvailableSkinsAsync(_games[_currentGameIndex]
+                .SkinsLocation, _games[_currentGameIndex].SkinTypes);
+            
+            AddGameSkinsIfMissing(skins);
+
+            //AddCachedGameWebSkins(_fileAccessService.LoadCachedWebSkins(_knownGames.Select(x => x.GameName)));
 
             return _gameSkins[_games[_currentGameIndex].GameName].OrderBy(x => x.IsWebSkin).ThenBy(x => x.Name);
         }
+
         public IEnumerable<string> GetOriginalSkinNames()
         {
-            foreach (string currentSkinName in _gameSkins[_games[_currentGameIndex].GameName].Where(x => x.IsOriginal).Select(x => x.Name))
+            foreach (string currentSkinName in _gameSkins[_games[_currentGameIndex].GameName].Where(currentSkin => currentSkin.IsOriginal())
+                         .Select(x => x.Name))
             {
                 yield return currentSkinName;
             }
         }
+
         public string GetSkinsLocation()
         {
             return _games[_currentGameIndex].SkinsLocation;
         }
+
         public IEnumerable<SkinType> GetSkinTypesForWeb()
         {
             if (_knownGames.Any(x => x.GameName == _games[_currentGameIndex].GameName))
@@ -229,85 +305,60 @@ namespace SkinManager.Services
                 return [];
             }
         }
-        //PSOUniversePS
-        //public async Task<IEnumerable<Skin>> GetWebSkinsForSpecificSkinType(string skinTypeName)
-        //{
-        //    KnownGameInfo? currentKnownGame = _knownGames.Single(x => x.GameName == _games[_currentGameIndex].GameName);
-        //    int knownGameIndex = _knownGames.FindIndex(x => x.GameName == currentKnownGame.GameName);
-        //    int skinTypeIndex = _knownGames[knownGameIndex].SkinTypes.FindIndex(x => x.Name == skinTypeName);
-        //    if ((DateOnly.FromDateTime(DateTime.Now).DayNumber - _knownGames[knownGameIndex].SkinTypes[skinTypeIndex].LastOnlineCheck.DayNumber) > 1)
-        //    {
-        //        using IServiceScope serviceScope = _scopeFactory.CreateScope();
-        //        PSOUniversePSWebAccessService webAccessService = serviceScope.ServiceProvider.GetRequiredService<PSOUniversePSWebAccessService>();
-        //        webAccessService.SkinTypes = _games[_currentGameIndex].SkinTypes.DistinctBy(x => x.Name).ToList();
-        //        if (!_gameSkins.ContainsKey(_games[_currentGameIndex].GameName))
-        //        {
-        //            _gameSkins.Add(_games[_currentGameIndex].GameName, []);
-        //        }
-        //        foreach (Skin currentSkin in await webAccessService.GetAvailableSkinsForSpecificTypeAsync(skinTypeName))
-        //        {
-        //            if (!_gameSkins[_games[_currentGameIndex].GameName].Any(x => x.Name == currentSkin.Name))
-        //            {
-        //                _gameSkins[_games[_currentGameIndex].GameName].Add(currentSkin);
-        //            }
-        //        }
-
-        //        _knownGames[knownGameIndex].SkinTypes[skinTypeIndex].LastOnlineCheck = DateOnly.FromDateTime(DateTime.Now);
-        //        return _gameSkins[_games[_currentGameIndex].GameName];
-        //    }
-        //    else
-        //    {
-        //        return _gameSkins[_games[_currentGameIndex].GameName];
-        //    }
-        //}
-        //Ephinea
-        public async Task<IEnumerable<Skin>> GetWebSkinsForSpecificSkinType(string skinTypeName)
+        public async Task<IEnumerable<Skin>> GetWebSkinsForSpecificSkinType(SkinType skinType)
         {
-            KnownGameInfo? currentKnownGame = _knownGames.Single(x => x.GameName == _games[_currentGameIndex].GameName);
-            int knownGameIndex = _knownGames.FindIndex(x => x.GameName == currentKnownGame.GameName);
-            int skinTypeIndex = _knownGames[knownGameIndex].SkinTypes.FindIndex(x => x.Name == skinTypeName);
-            if ((DateOnly.FromDateTime(DateTime.Now).DayNumber - _knownGames[knownGameIndex].SkinTypes[skinTypeIndex].LastOnlineCheck.DayNumber) > 1)
+            if (_knownGames.SingleOrDefault(x => x.GameName == _games[_currentGameIndex].GameName) is
+                { } currentKnownGame)
             {
-                using IServiceScope serviceScope = _scopeFactory.CreateScope();
-                EphineaWebAccessService webAccessService = serviceScope.ServiceProvider.GetRequiredService<EphineaWebAccessService>();
-                webAccessService.SkinTypes = _games[_currentGameIndex].SkinTypes.DistinctBy(x => x.Name).ToList();
-                if (!_gameSkins.ContainsKey(_games[_currentGameIndex].GameName))
+                if (_games[_currentGameIndex].GameName == "Phantasy Star Online BB")
                 {
-                    _gameSkins.Add(_games[_currentGameIndex].GameName, []);
-                }
-                foreach (Skin currentSkin in await webAccessService.GetAvailableSkinsForSpecificTypeAsync(skinTypeName))
-                {
-                    if (!_gameSkins[_games[_currentGameIndex].GameName].Any(x => x.Name == currentSkin.Name))
-                    {
-                        _gameSkins[_games[_currentGameIndex].GameName].Add(currentSkin);
-                    }
+                    using IServiceScope serviceScope = _scopeFactory.CreateScope();
+
+                    var webAccessService =
+                        serviceScope.ServiceProvider.GetRequiredService<EphineaWebAccessService>();
+
+                    AddGameSkinsIfMissing(await webAccessService.GetAvailableSkinsForSpecificTypeAsync(skinType));
+
+                    List<SkinType> currentSkinTypes = currentKnownGame.SkinTypes;
+
+                    SkinType tempSkinType = currentSkinTypes
+                        .First(x => x.Name == skinType.Name);
+                    
+                    currentSkinTypes.Remove(tempSkinType);
+                    
+                    currentSkinTypes.Add(tempSkinType with {LastOnlineCheck = DateOnly.FromDateTime(DateTime.Now)});
+                    
+                    _knownGames.Remove(currentKnownGame);
+                    
+                    _knownGames.Add(currentKnownGame with { SkinTypes = currentSkinTypes });
+                    
+                    return _gameSkins[_games[_currentGameIndex].GameName];
                 }
 
-                _knownGames[knownGameIndex].SkinTypes[skinTypeIndex].LastOnlineCheck = DateOnly.FromDateTime(DateTime.Now);
-                return _gameSkins[_games[_currentGameIndex].GameName];
+                return [];
             }
             else
             {
-                return _gameSkins[_games[_currentGameIndex].GameName];
+                return [];
             }
         }
-        #endregion        
-        public void LoadGamesInformation()
+
+        #endregion
+
+        public async Task LoadGamesInformation()
         {
-            LoadKnownGames(_locations.KnownGamesFile);
-            LoadGames(_locations.GameInfoFile);
+            await LoadKnownGames(_locations.KnownGamesFile);
+            await LoadGames(_locations.GameInfoFile);
         }
-        public void LoadGames(string gamesInfoFile)
+
+        private async Task LoadGames(string gamesInfoFile)
         {
-            _games = new(_fileAccessService.LoadGameInfo(gamesInfoFile));
+            _games = [..await _fileAccessService.LoadGameInfo(gamesInfoFile)];
         }
-        public void LoadKnownGames(string knownGamesInfoFile)
+
+        private async Task LoadKnownGames(string knownGamesInfoFile)
         {
-            _knownGames = new(_fileAccessService.LoadKnownGamesInfo(knownGamesInfoFile));
-            for (int i = 0; i < _knownGames.Count; i++)
-            {
-                _knownGames[i].SkinTypes = new(_knownGames[i].SkinTypes.DistinctBy(x => x.Name));
-            }
+            _knownGames = [..await _fileAccessService.LoadKnownGamesInfo(knownGamesInfoFile)];
         }
 
         /// <summary>
@@ -316,17 +367,23 @@ namespace SkinManager.Services
         /// <returns>The default collection of SkinType</returns>
         private List<SkinType> PopulateDefaultSkinTypes()
         {
-            List<SkinType> skinTypes = [];
-            skinTypes.Add(new SkinType() { Name = "Area", SubTypes = ["Forest"] });
-            skinTypes.Add(new SkinType() { Name = "Audio", SubTypes = ["System", "Effect", "Character", "Enemy"] });
-            skinTypes.Add(new SkinType() { Name = "Class", SubTypes = ["Warrior"] });
-            skinTypes.Add(new SkinType() { Name = "Effect", SubTypes = ["Fire"] });
-            skinTypes.Add(new SkinType() { Name = "Enemy", SubTypes = ["Grunt"] });
-            skinTypes.Add(new SkinType() { Name = "Equipment", SubTypes = ["Armor", "Shield", "Weapon"] });
-            skinTypes.Add(new SkinType() { Name = "Object", SubTypes = ["Box"] });
-            skinTypes.Add(new SkinType() { Name = "Helper", SubTypes = ["Guardian"] });
-            skinTypes.Add(new SkinType() { Name = "NPC", SubTypes = ["GuildMaster"] });
-            skinTypes.Add(new SkinType() { Name = "UI", SubTypes = ["HUD"] });
+            DateOnly currentDate = DateOnly.FromDateTime(DateTime.Now);
+            
+            List<SkinType> skinTypes =
+            [
+                SkinType.Create("Area", ["Forest"], currentDate),
+                SkinType.Create("Audio", ["System", "Effect", "Character", "Enemy"], currentDate),
+                SkinType.Create("Class", ["Warrior"], currentDate),
+                SkinType.Create("Effect", ["Fire"], currentDate),
+                SkinType.Create("Enemy", ["Grunt"], currentDate),
+                SkinType.Create("Equipment", ["Armor", "Shield", "Weapon"], currentDate),
+                SkinType.Create("Object", ["Box"], currentDate),
+                SkinType.Create("Helper", ["Guardian"], currentDate),
+                SkinType.Create("NPC", ["GuildMaster"], currentDate),
+                SkinType.Create("UI", ["HUD"], currentDate)
+
+            ];
+
             return skinTypes;
         }
 
@@ -338,32 +395,38 @@ namespace SkinManager.Services
             }
         }
 
-        public void SaveCachedWebSkins()
+        private async Task SaveCachedWebSkins()
         {
-            _fileAccessService.SaveWebSkinsList(GetCachedWebSkins());
+            await _fileAccessService.SaveWebSkinsList(GetCachedWebSkins());
         }
-        public void SaveGames()
+
+        private async Task SaveGames()
         {
-            _fileAccessService.SaveGameInfo(GetGamesCollection(), _locations.GameInfoFile);
+            await _fileAccessService.SaveGameInfo(GetGamesCollection(), _locations.GameInfoFile);
         }
-        public void SaveGamesInformation()
+
+        public async Task SaveGamesInformation()
         {
-            SaveKnownGames();
-            SaveGames();
-            SaveCachedWebSkins();
+            await SaveKnownGames();
+            await SaveGames();
+            await SaveCachedWebSkins();
         }
-        public void SaveKnownGames()
+
+        private async Task SaveKnownGames()
         {
-            _fileAccessService.SaveKnownGamesList(GetKnownGames(), _locations.KnownGamesFile);
+            await _fileAccessService.SaveKnownGamesList(GetKnownGames(), _locations.KnownGamesFile);
         }
+
         public bool SelectedGameIsKnown(string gameName)
         {
             return _knownGames.Any(x => x.GameName == gameName);
         }
+
         public void SetCurrentGame(string currentGameName)
         {
             _currentGameIndex = _games.FindIndex(x => x.GameName == currentGameName);
         }
+
         public void SetSkinsSource(SkinsSource skinsSource)
         {
             _skinsSource = skinsSource;

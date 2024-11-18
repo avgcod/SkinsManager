@@ -12,7 +12,6 @@ namespace SkinManager.Services
     {
         private readonly Dictionary<SkinType, string> skinTypeAddresses = [];
         private readonly HttpClient _httpClient;
-        public List<SkinType> SkinTypes { get; set; } = [];
 
         #region Web Address Strings
         private const string baseSiteAddress = "http://universps.online.fr/pso/bb/skin/listeSkinUS.php5";
@@ -56,60 +55,75 @@ namespace SkinManager.Services
         public PSOUniversePSWebAccessService(HttpClient httpClient)
         {
             _httpClient = httpClient;
-
-            skinTypeAddresses.Add(new() { Name = "Area", SubTypes = [] }, areaSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Pack", SubTypes = ["Other"] }, packSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Class", SubTypes = ["Humar"] }, humarSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Class", SubTypes = ["Hunewearl"] }, hunewearlSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Class", SubTypes = ["Hucast"] }, hucastSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Class", SubTypes = ["Hucaseal"] }, hucasealSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Class", SubTypes = ["Ramar"] }, ramarSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Class", SubTypes = ["Ramarl"] }, ramarlSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Class", SubTypes = ["Racast"] }, racastSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Class", SubTypes = ["Racaseal"] }, racasealSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Class", SubTypes = ["Fomar"] }, fomarSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Class", SubTypes = ["Fomarl"] }, fomarlSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Class", SubTypes = ["Fonewm"] }, fonewmSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Class", SubTypes = ["Fonewearl"] }, fonewearlSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "NPC", SubTypes = ["Ninja"] }, ninjaSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "NPC", SubTypes = ["Rico"] }, ricoSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "NPC", SubTypes = ["Sonic"] }, sonicSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "NPC", SubTypes = ["Knuckles"] }, knucklesSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "NPC", SubTypes = ["Tails"] }, tailsSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "NPC", SubTypes = ["Flowen"] }, flowenSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "NPC", SubTypes = ["Elly"] }, ellySkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "NPC", SubTypes = ["Momoka"] }, momokaSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "NPC", SubTypes = ["Irene"] }, ireneSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "NPC", SubTypes = ["Guild"] }, guildHostessSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Enemy", SubTypes = [] }, enemySkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "NPC", SubTypes = ["Other"] }, npcSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "UI", SubTypes = ["Title Screen"] }, titleScreenSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "UI", SubTypes = ["HUD"] }, hudSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "UI", SubTypes = ["Text"] }, textSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Object", SubTypes = ["Other"] }, objectSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Effect", SubTypes = ["Attack", "Buff", "Healing", "Other"] }, effectSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Other", SubTypes = ["Misc"] }, otherSkinsAddress);
+            DateOnly currentDate = DateOnly.FromDateTime(DateTime.Now);
+            
+            skinTypeAddresses.Add(SkinType.Create("Area", ["Forest", "Caves", "Mines", "Ruins", "Jungle",
+                "Mountain", "Seaside", "CCA", "Seabed", "Crater", "Desert", "Lobby", "City", "Temple", "Spaceship",
+                "Towers"], currentDate), areaSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Pack", ["Other"], currentDate), packSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Class", ["Humar"], currentDate), humarSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Class", ["Hunewearl"], currentDate), hunewearlSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Class", ["Hucast"], currentDate), hucastSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Class", ["Hucaseal"], currentDate), hucasealSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Class", ["Ramar"], currentDate), ramarSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Class", ["Ramarl"], currentDate), ramarlSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Class", ["Racast"], currentDate), racastSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Class", ["Racaseal"], currentDate), racasealSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Class", ["Fomar"], currentDate), fomarSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Class", ["Fomarl"], currentDate), fomarlSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Class", ["Fonewm"], currentDate), fonewmSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Class", ["Fonewearl"], currentDate), fonewearlSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("NPC", ["Ninja"], currentDate), ninjaSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("NPC", ["Rico"], currentDate), ricoSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("NPC", ["Sonic"], currentDate), sonicSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("NPC", ["Knuckles"], currentDate), knucklesSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("NPC", ["Tails"], currentDate), tailsSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("NPC", ["Flowen"], currentDate), flowenSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("NPC", ["Elly"], currentDate), ellySkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("NPC", ["Momoka"], currentDate), momokaSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("NPC", ["Irene"], currentDate), ireneSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("NPC", ["Guild"], currentDate), guildHostessSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("NPC", ["Other"], currentDate), npcSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Enemy", ["Booma", "Gobooma", "Gigobooma", "Rappy",
+                "Al Rappy", "Rappy Family", "Monest", "Mothmant", "Savage Wolf", "Barbarouse Wolf", "Hildebear",
+                "Hildeblue", "Hidelt", "Hildetorr", "Dargon", "Sil Dragon", "Evil Shark", "Pal Shark", "Guil Shark",
+                "Poison Lily", "Nar Lily", "Grass Assassin", "Nano Dragon", "Pan Arms", "Hiddom", "Migium", "DelRoLe",
+                "DelRalLie", "Gilchic", "Dubchic", "Canadine", "Canane", "Sinow Beat", "Sinow Gold", "Garanz",
+                "Vol Opt", "Dimenian", "La Dimenian", "So Dimenian", "Claw", "Bulclaw", "Bulk", "Delsaber",
+                "Dark Belra", "Chaos Sorcerer", "Dark Gunner", "Chaos Bringer", "Dark Falz", "Merillia", "Meritas",
+                "Mericarol", "Ul Gibbon", "Zol Gibbon", "Gibbles", "Gee", "Gi Gue", "Sinow Berril", "Sinow Spigell",
+                "Gol Dragon", "Gal Gryphon", "Domolm", "Dolmdari", "Recon", "Reconbox", "Sinow Zoa", "Sinow Zele",
+                "Morfos", "Deldepth", "Delbiter", "Epsilon", "Olga Flow", "Sand Rappy", "Del Rappy", "Girtablublu",
+                "Goran", "Pyro Goran", "Goran Detonator", "Merissa A", "Merissa AA", "Zu", "Pazuzu",
+                "Satellite Lizard", "Yowie"], currentDate), enemySkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("UI", ["Title Screen"], currentDate), titleScreenSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("UI", ["HUD"], currentDate), hudSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("UI", ["Text"], currentDate), textSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Object", ["Other"], currentDate), objectSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Effect", ["Attack", "Buff", "Healing", "Other"], currentDate), effectSkinsAddress);
+            skinTypeAddresses.Add(SkinType.Create("Other", ["Misc"], currentDate), otherSkinsAddress);
         }
 
-        public async Task<IEnumerable<Skin>> GetAvailableSkinsForSpecificTypeAsync(string skinTypeName)
+        public async Task<IEnumerable<Skin>> GetAvailableSkinsForSpecificTypeAsync(SkinType localSkinType, IEnumerable<SkinType> localSkinTypes)
         {
-            SkinType currentType = skinTypeAddresses.First(x => x.Key.Name.Equals(skinTypeName, StringComparison.OrdinalIgnoreCase)).Key;
-            return await GetSkinsFromWebsite(currentType, skinTypeAddresses[currentType]);
+            SkinType webSkinType = skinTypeAddresses.First(x => x.Key.Name.Equals(localSkinType.Name, StringComparison.OrdinalIgnoreCase)).Key;
+            
+            return await GetSkinsFromWebsite(webSkinType, skinTypeAddresses[webSkinType], localSkinTypes);
         }
 
-        public async Task<IEnumerable<Skin>> GetAvailableSkinsAsync()
+        public async Task<IEnumerable<Skin>> GetAvailableSkinsAsync(IEnumerable<SkinType> localSkinTypes)
         {
             List<Skin> skins = [];
 
             foreach (KeyValuePair<SkinType, string> currentPair in skinTypeAddresses)
             {
-                skins.AddRange(await GetSkinsFromWebsite(currentPair.Key, currentPair.Value));
+                skins.AddRange(await GetSkinsFromWebsite(currentPair.Key, currentPair.Value, localSkinTypes));
             }
 
             return skins;
         }
 
-        private async Task<IEnumerable<Skin>> GetSkinsFromWebsite(SkinType skinType, string address)
+        private async Task<IEnumerable<Skin>> GetSkinsFromWebsite(SkinType webSkinType, string address, IEnumerable<SkinType> localSkinTypes)
         {
             string response = await _httpClient.GetStringAsync(baseSiteAddress + address);
 
@@ -175,32 +189,27 @@ namespace SkinManager.Services
                             }
                         }
 
-                        string currentSkinSubType = GetSkinSubType(skinType, currentSkinName);
-                        Skin tempSkin = new()
-                        {
-                            Author = currentAuthor,
-                            CreationDate = DateOnly.ParseExact(currenSkinAddDate, "dd/MM/yyyy"),
-                            Description = $"{skinType.Name} {currentSkinSubType} skin {currentSkinName}.",
-                            IsWebSkin = true,
-                            LastUpdatedDate = DateOnly.ParseExact(currenSkinAddDate, "dd/MM/yyyy"),
-                            Name = currentSkinName,
-                            Location = currentSkinDownloadLink,
-                            Screenshots = currenSkinScreenshots,
-                            SkinType = skinType,
-                            SubType = currentSkinSubType
-                        };
+                        string currentSkinSubType = GetSkinSubType(localSkinTypes, webSkinType, currentSkinName);
+                        string description = $"{webSkinType.Name} {currentSkinSubType} skin {currentSkinName}.";
+                        DateOnly currentDate = DateOnly.ParseExact(currenSkinAddDate, "dd/MM/yyyy");
+                        Skin tempSkin = Skin.Create
+                            (
+                            webSkinType.Name, currentSkinSubType, currentSkinName,
+                            [currentSkinDownloadLink], currentAuthor, description, currentDate, currentDate, 
+                            true, currenSkinScreenshots
+                            );
                         foundSkins.Add(tempSkin);
                     }
                 }
             }
             return foundSkins;
         }
-        private string GetSkinSubType(SkinType tempSkinType, string skinName)
+        private string GetSkinSubType(IEnumerable<SkinType> localSkinTypes, SkinType webSkinType, string skinName)
         {
-            if (tempSkinType.Name == "Area" || tempSkinType.Name == "Pack" || tempSkinType.Name == "NPC"
-        || tempSkinType.Name == "Effect" || tempSkinType.Name == "Object" || tempSkinType.Name == "Enemy")
+            if (webSkinType.Name == "Area" || webSkinType.Name == "Pack" || webSkinType.Name == "NPC"
+        || webSkinType.Name == "Effect" || webSkinType.Name == "Object" || webSkinType.Name == "Enemy")
             {
-                foreach (string currentSubType in SkinTypes.Single(x => x.Name == tempSkinType.Name).SubTypes)
+                foreach (string currentSubType in localSkinTypes.Single(x => x.Name == webSkinType.Name).SubTypes)
                 {
                     if (skinName.Contains(currentSubType, StringComparison.OrdinalIgnoreCase))
                     {
@@ -208,9 +217,9 @@ namespace SkinManager.Services
                     }
                 }
 
-                if (tempSkinType.Name == "Area")
+                if (webSkinType.Name == "Area")
                 {
-                    return SkinTypes.Single(x => x.Name == tempSkinType.Name).SubTypes[0];
+                    return localSkinTypes.Single(x => x.Name == webSkinType.Name).SubTypes[0];
                 }
                 else
                 {
@@ -219,7 +228,7 @@ namespace SkinManager.Services
             }
             else
             {
-                return tempSkinType.SubTypes[0];
+                return webSkinType.SubTypes[0];
             }
         }
     }

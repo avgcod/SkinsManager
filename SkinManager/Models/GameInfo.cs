@@ -1,28 +1,16 @@
 ﻿using System;
-using LinqToDB.Mapping;
 using System.Collections.Generic;
 
-namespace SkinManager.Models
+namespace SkinManager.Models;
+
+public record GameInfo(string GameName, string SkinsLocation, string GameLocation, string GameExecutable, List<string> AppliedSkins,
+List<SkinType> SkinTypes)
 {
-    [Table("GameInfo")]
-    public class GameInfo
-    {
-        [PrimaryKey, Identity]
-        public int GameID { get; set; }
-
-        [Column, NotNull]
-        public string GameName  {get;set;} = string.Empty;
-
-        [Column, NotNull]
-        public string SkinsLocation  {get;set;} = string.Empty;
-
-        [Column, NotNull]
-        public string GameLocation  {get;set;} = string.Empty;
-
-        [Column, NotNull]
-        public string GameExecutable  {get;set;} = string.Empty;
-
-        public List<string> AppliedSkins { get; set; } = [];
-        public List<SkinType> SkinTypes { get; set; } = [];
-    }
+    public static GameInfo Create(string gameName, string skinsLocation, string gameLocation,
+        string gameExecutable, List<string> appliedSkins, List<SkinType> skinTypes)
+        => new GameInfo(gameName, skinsLocation, gameLocation, gameExecutable, appliedSkins, skinTypes);
+        
+    public static GameInfo CreateWithId(Guid gameId, string gameName, string skinsLocation, string gameLocation,
+        string gameExecutable, List<string> appliedSkins, List<SkinType> skinTypes)
+        => new GameInfo(gameName, skinsLocation, gameLocation, gameExecutable, appliedSkins, skinTypes);
 }

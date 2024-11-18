@@ -15,8 +15,9 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="skinToDownload">The skin to download.</param>
         /// <param name="skinsFolder">Where to save the skin.</param>
+        /// <param name="downloadLinkNumber">Which skin location download link to use.</param>
         /// <returns>If the operations succeeded.</returns>
-        Task<bool> DownloadSkin(Skin skinToDownload, string skinsFolder);
+        Task<bool> DownloadSkin(Skin skinToDownload, string skinsFolder, int downloadLinkNumber);
 
         /// <summary>
         /// Gets the available skins in a provided location.
@@ -31,14 +32,14 @@ namespace SkinManager.Services
         IEnumerable<GameInfo> GetGamesCollection();
         string GetGameExecutableLocation();
         IEnumerable<KnownGameInfo> GetKnownGames();
-        Task<IEnumerable<Skin>> GetWebSkinsForSpecificSkinType(string skinTypeName);
+        Task<IEnumerable<Skin>> GetWebSkinsForSpecificSkinType(SkinType skinType);
         string GetAppliedSkinNameFromLocation(string selectedSkinTypeName, string selectedSkinSubTypeName);
         IEnumerable<string> GetOriginalSkinNames();
         string GetSkinsLocation();
         IEnumerable<SkinType> GetSkinTypesForWeb();
 
-        void LoadGamesInformation();
-        void SaveGamesInformation();
+        Task LoadGamesInformation();
+        Task SaveGamesInformation();
         void RemoveAppliedSkin(string removedSkinName);
         bool SelectedGameIsKnown(string gameName);
 

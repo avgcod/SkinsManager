@@ -10,13 +10,13 @@ namespace SkinManager.Services
 {
     public class EphineaWebAccessService
     {
-        private readonly Dictionary<SkinType, string> skinTypeAddresses = [];
+        private readonly Dictionary<SkinType, string> _skinTypeAddresses = [];
         private readonly HttpClient _httpClient;
-        public List<SkinType> SkinTypes { get; set; } = [];
 
         #region Web Address Strings
+
         private const string baseSiteAddress = "https://wiki.pioneer2.net/w/Skin:";
-        private const string baseScreenshotsAddress = "https://wiki.pioneer2.net/w/File:";
+        private const string baseScreenshotsAddress = "https://wiki.pioneer2.net/";
         private const string baseDownloadAddress = "https://wiki.pioneer2.net/files/";
         private const string areaSkinsAddress = "Areas";
         private const string classesSkinsAddress = "Classes";
@@ -29,33 +29,60 @@ namespace SkinManager.Services
         private const string equipmentSkinsAddress = "Equipment";
         private const string npcsSkinsAddress = "NPCs";
         private const string unitxtSkinsAddress = "Unitxt";
+
         #endregion
 
         public EphineaWebAccessService(HttpClient httpClient)
         {
             _httpClient = httpClient;
+            DateOnly currentDate = DateOnly.FromDateTime(DateTime.Now);
 
-            skinTypeAddresses.Add(new() { Name = "Area", SubTypes = [] }, areaSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Class", SubTypes = [] }, classesSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Enemy", SubTypes = [] }, monstersSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "NPC", SubTypes = ["Other"] }, npcsSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "UI", SubTypes = ["Title Screen"] }, titleScreenSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "UI", SubTypes = ["HUD"] }, hudSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Object", SubTypes = ["Other"] }, objectSkinsAddress);
-            skinTypeAddresses.Add(new() { Name = "Effect", SubTypes = ["Attack", "Buff", "Healing", "Other"] }, effectSkinsAddress);
+            _skinTypeAddresses.Add(SkinType.Create("Area", [
+                "Multiple areas", "Lobby", "Pioneer 2",
+                "Forest", "Cave", "VR Temple", "VR Spaceship", "Central Control Area", "Seabed", "Control Tower",
+                "Crater Interior", "Subterranean Desert"
+            ], currentDate), areaSkinsAddress);
+            _skinTypeAddresses.Add(SkinType.Create("Audio", ["Other"], currentDate), audioSkinsAdress);
+            _skinTypeAddresses.Add(SkinType.Create("Class", [
+                "Humar", "Hucast", "Hunewearl", "Hucaseal",
+                "Fomar", "Fomarl", "Fonewearl", "Ramar", "Racast", "Ramarl", "Racaseal"
+            ], currentDate), classesSkinsAddress);
+            _skinTypeAddresses.Add(SkinType.Create("Enemy", [
+                "Booma", "Gobooma", "Gigobooma", "Rappy",
+                "Al Rappy", "Rappy Family", "Monest", "Mothmant", "Savage Wolf", "Barbarouse Wolf", "Hildebear",
+                "Hildeblue", "Hidelt", "Hildetorr", "Dargon", "Sil Dragon", "Evil Shark", "Pal Shark", "Guil Shark",
+                "Poison Lily", "Nar Lily", "Grass Assassin", "Nano Dragon", "Pan Arms", "Hiddom", "Migium", "DelRoLe",
+                "DelRalLie", "Gilchic", "Dubchic", "Canadine", "Canane", "Sinow Beat", "Sinow Gold", "Garanz",
+                "Vol Opt", "Dimenian", "La Dimenian", "So Dimenian", "Claw", "Bulclaw", "Bulk", "Delsaber",
+                "Dark Belra", "Chaos Sorcerer", "Dark Gunner", "Chaos Bringer", "Dark Falz", "Merillia", "Meritas",
+                "Mericarol", "Ul Gibbon", "Zol Gibbon", "Gibbles", "Gee", "Gi Gue", "Sinow Berril", "Sinow Spigell",
+                "Gol Dragon", "Gal Gryphon", "Domolm", "Dolmdari", "Recon", "Reconbox", "Sinow Zoa", "Sinow Zele",
+                "Morfos", "Deldepth", "Delbiter", "Epsilon", "Olga Flow", "Sand Rappy", "Del Rappy", "Girtablublu",
+                "Goran", "Pyro Goran", "Goran Detonator", "Merissa A", "Merissa AA", "Zu", "Pazuzu",
+                "Satellite Lizard", "Yowie"
+            ], currentDate), monstersSkinsAddress);
+            _skinTypeAddresses.Add(SkinType.Create("NPC", ["Other"], currentDate), npcsSkinsAddress);
+            _skinTypeAddresses.Add(SkinType.Create("Equipment", ["Armor", "Barrier", "Weapon",
+                "Mag"], currentDate), equipmentSkinsAddress);
+            _skinTypeAddresses.Add(SkinType.Create("UI", ["Title Screen"], currentDate), titleScreenSkinsAddress);
+            _skinTypeAddresses.Add(SkinType.Create("UI", ["HUD"], currentDate), hudSkinsAddress);
+            _skinTypeAddresses.Add(SkinType.Create("Object", ["Other"], currentDate), objectSkinsAddress);
+            _skinTypeAddresses.Add(SkinType.Create("Effect", ["Attack", "Buff", "Healing", "Other"], currentDate),
+                effectSkinsAddress);
         }
 
-        public async Task<IEnumerable<Skin>> GetAvailableSkinsForSpecificTypeAsync(string skinTypeName)
+        public async Task<IEnumerable<Skin>> GetAvailableSkinsForSpecificTypeAsync(SkinType skinType)
         {
-            SkinType currentType = skinTypeAddresses.First(x => x.Key.Name.Equals(skinTypeName, StringComparison.OrdinalIgnoreCase)).Key;
-            return await GetSkinsFromWebsite(currentType, skinTypeAddresses[currentType]);
+            SkinType currentType = _skinTypeAddresses
+                .First(x => x.Key.Name.Equals(skinType.Name, StringComparison.OrdinalIgnoreCase)).Key;
+            return await GetSkinsFromWebsite(currentType, _skinTypeAddresses[currentType]);
         }
 
-        public async Task<IEnumerable<Skin>> GetAvailableSkinsAsync()
+        public async Task<IEnumerable<Skin>> GetAvailableSkinsAsync(IEnumerable<SkinType> localSkinTypes)
         {
             List<Skin> skins = [];
 
-            foreach (KeyValuePair<SkinType, string> currentPair in skinTypeAddresses)
+            foreach (KeyValuePair<SkinType, string> currentPair in _skinTypeAddresses)
             {
                 skins.AddRange(await GetSkinsFromWebsite(currentPair.Key, currentPair.Value));
             }
@@ -63,118 +90,96 @@ namespace SkinManager.Services
             return skins;
         }
 
-        private async Task<IEnumerable<Skin>> GetSkinsFromWebsite(SkinType skinType, string address)
+        private async Task<IEnumerable<Skin>> GetSkinsFromWebsite(SkinType webSkinType, string address)
         {
-            string response = await _httpClient.GetStringAsync(baseSiteAddress + address);
-
-            HtmlDocument theDoc = new();
-
-            theDoc.LoadHtml(response);
-
-            //The html lists each author in a div with an attribute name with a value that starts with cat_.
-            IEnumerable<HtmlNode> authors = theDoc.DocumentNode.SelectNodes("//div[@class='title1 titreCategorie']");
-
-            //The html lists skins for each author in a tbody under the respective author div but not as a child of the author div.
-            IEnumerable<HtmlNode> skinTables = theDoc.DocumentNode.SelectNodes("//tbody[@class='contenuCategorieSkin']");
-
-            IEnumerator<HtmlNode> skinTablesEnumerator = skinTables.GetEnumerator();
-
-            string currentAuthor = string.Empty;
-            string currentSkinName = string.Empty;
-            string currenSkinAddDate = string.Empty;
-            string currentSkinDownloadLink = string.Empty;
             List<Skin> foundSkins = [];
-            List<string> currenSkinScreenshots = [];
+            string mainPageResponse = await _httpClient.GetStringAsync(baseSiteAddress + address);
 
-            foreach (HtmlNode authorNode in authors)
+            HtmlDocument mainPageDoc = new();
+
+            mainPageDoc.LoadHtml(mainPageResponse);
+
+            //The html lists all skins on the same page in a table with the class 'wikitable'.
+            IEnumerable<HtmlNode> skinTableNodes = mainPageDoc.DocumentNode.SelectNodes("//table[@class='wikitable']");
+
+            foreach (HtmlNode skinNode in skinTableNodes)
             {
-                //The html lists the author's name in the div attribute name with a value that starts with cat_.
-                currentAuthor = authorNode.GetAttributeValue("name", "").Replace("cat_", string.Empty);
-
-                if (skinTablesEnumerator.MoveNext())
+                //The html contains an a node with an href that starts with /w/Skin: that when combined with the base address links to the skins specific page
+                HtmlNode currentSkinNode = skinNode.SelectSingleNode(".//td/a[contains(@href,'/w/Skin:')]");
+                
+                //The html contains a td node with an a node with attribute title that starts with Skin:
+                //That contains the skin name.
+                string currentSkinName = currentSkinNode.GetAttributeValue("title", string.Empty)
+                    .Replace("Skin:", String.Empty);
+                
+                if (currentSkinNode?.GetAttributeValue("href", string.Empty) is { Length : > 0 } currentSkinLink)
                 {
-                    //The html lists skins in a table with one tbody housing all skins in separate rows.
-                    //The table is not a child of the author div so it has to be handled as its own node but the number of author and skin tables are 1:1.
-                    HtmlNode skinTableNodes = skinTablesEnumerator.Current;
+                    string skinPageResponse =
+                        await _httpClient.GetStringAsync(baseSiteAddress + currentSkinLink.Replace("/w/Skin:", string.Empty));
 
-                    //The html lists each skin row as a tr with attribute class with value ligneSkin.
-                    IEnumerable<HtmlNode> skinRows = skinTableNodes.SelectNodes(".//tr[@class='ligneSkin']");
+                    HtmlDocument skinPageDoc = new();
 
-                    foreach (HtmlNode skinRow in skinRows)
-                    {
-                        //The html lists the skin name in the inner text of an a node with the attribute href that has a value that starts with #skin_.
-                        //The first td of row is not closed causing the nodes to not be properly linked.
-                        currentSkinName = skinRow.SelectSingleNode(".//a[contains(@href,'#skin_')]")?.InnerText.Trim() ?? string.Empty;
+                    skinPageDoc.LoadHtml(skinPageResponse);
 
-                        //The html lists the skin date added in a text field after the 3rd b node.
-                        currenSkinAddDate = skinRow.SelectSingleNode(".//b[contains(text(),'Date')]")?.NextSibling?.InnerText.Trim() ?? string.Empty;
+                    //The html has a table with rows for author, type and source.
+                    HtmlNode skinInfoNode =
+                        skinPageDoc.DocumentNode.SelectSingleNode(".//th[contains(text(), 'Author')]/../../..");
+                    string currentAuthor = skinInfoNode.SelectSingleNode(".//tr[3]/td[1]").InnerText;
+                    string webProvidedType = skinInfoNode.SelectSingleNode(".//tr[4]/td[1]").InnerText
+                        .Replace(" skin", string.Empty);
 
-                        //The html lists the skin download line an a node with an attribute href with a value that contains telechargement and ends in t=d.
-                        currentSkinDownloadLink = skinRow.SelectSingleNode(".//a[contains(@href,'telechargement') and contains(@href,'&t=d')]")?.GetAttributeValue("href", string.Empty) ?? string.Empty;
+                    //The html has a ul node with class gallery mw-gallery-nolines that contain img nodes with src
+                    //attributes that starts with /images/thumb/ which are links to the screenshots.
+                    //Using the thumb version to reduce bandwidth strain but this can be changed to the full versions.
+                    IEnumerable<string> currentScreenshots = skinPageDoc.DocumentNode
+                        .SelectSingleNode("//ul[contains(@class, 'gallery mw-gallery-nolines')]")
+                        .SelectNodes(".//img[contains(@src, '/images/thumb/')]")
+                        .Select(imgNode => string.Concat(baseScreenshotsAddress,imgNode.Attributes["src"].Value));
 
-                        currentSkinDownloadLink = string.Concat(baseDownloadAddress, currentSkinDownloadLink);
+                    //The html has a td node(s) with an a node that contains an href attribute that starts with
+                    //https://wiki.pioneer2.net/files/ that contains the download link(s) for the skin.
+                    IEnumerable<string> currentDownloadLinks = skinPageDoc.DocumentNode
+                        .SelectNodes(".//td/a[contains(@href,'https://wiki.pioneer2.net/files/')]")
+                        .Where(x => !x.Attributes["href"].Value.Contains("revert", StringComparison.OrdinalIgnoreCase))
+                        .Select(dlNode => dlNode.Attributes["href"].Value);
 
-                        //The html lists the full size skin screenshot(s) in the second row in a nodes with an href attribute that contains imageSkin/.
-                        //IEnumerable<HtmlNode> currentSkinScreenshotNodes = skinRow.SelectNodes(".//td/a[@class='highslide' and contains(@href,'imageSkin/')]");
+                    string currentSkinSubType = GetSkinSubType(webSkinType, currentSkinName,webProvidedType);
+                    string description = $"{webSkinType.Name} {currentSkinSubType} skin {currentSkinName}.";
+                    DateOnly currentDate = DateOnly.FromDateTime(DateTime.Now);
 
-                        //The html lists the mini skin screenshot(s) in the second row in img nodes with a src attribute that contains imageSkin/mini.
-                        IEnumerable<HtmlNode> currentSkinScreenshotNodes = skinRow.SelectNodes(".//img[contains(@src,'imageSkin/mini')]");
+                    Skin tempSkin = Skin.Create
+                    (
+                        webSkinType.Name, currentSkinSubType, currentSkinName,
+                        currentDownloadLinks, currentAuthor, description, currentDate, currentDate,
+                        true, currentScreenshots
+                    );
 
-                        if (currentSkinScreenshotNodes is not null)
-                        {
-                            currenSkinScreenshots = [];
-                            foreach (HtmlNode screenShotNode in currentSkinScreenshotNodes)
-                            {
-                                currenSkinScreenshots.Add(string.Concat(baseScreenshotsAddress, screenShotNode.Attributes["src"].Value));
-                            }
-                        }
-
-                        string currentSkinSubType = GetSkinSubType(skinType, currentSkinName);
-                        Skin tempSkin = new()
-                        {
-                            Author = currentAuthor,
-                            CreationDate = DateOnly.ParseExact(currenSkinAddDate, "dd/MM/yyyy"),
-                            Description = $"{skinType.Name} {currentSkinSubType} skin {currentSkinName}.",
-                            IsWebSkin = true,
-                            LastUpdatedDate = DateOnly.ParseExact(currenSkinAddDate, "dd/MM/yyyy"),
-                            Name = currentSkinName,
-                            Location = currentSkinDownloadLink,
-                            Screenshots = currenSkinScreenshots,
-                            SkinType = skinType,
-                            SubType = currentSkinSubType
-                        };
-                        foundSkins.Add(tempSkin);
-                    }
+                    foundSkins.Add(tempSkin);
                 }
             }
+
             return foundSkins;
         }
-        private string GetSkinSubType(SkinType tempSkinType, string skinName)
-        {
-            if (tempSkinType.Name == "Area" || tempSkinType.Name == "Pack" || tempSkinType.Name == "NPC"
-        || tempSkinType.Name == "Effect" || tempSkinType.Name == "Object" || tempSkinType.Name == "Enemy")
-            {
-                foreach (string currentSubType in SkinTypes.Single(x => x.Name == tempSkinType.Name).SubTypes)
-                {
-                    if (skinName.Contains(currentSubType, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return currentSubType;
-                    }
-                }
 
-                if (tempSkinType.Name == "Area")
-                {
-                    return SkinTypes.Single(x => x.Name == tempSkinType.Name).SubTypes[0];
-                }
-                else
-                {
-                    return "Unknown";
-                }
-            }
-            else
+        private string GetSkinSubType(SkinType webSkinType, string skinName, string webProvidedType)
+        {
+            foreach (string currentSubType in  webSkinType.SubTypes)
             {
-                return tempSkinType.SubTypes[0];
+                if (skinName.Contains(currentSubType, StringComparison.OrdinalIgnoreCase))
+                {
+                    return currentSubType;
+                }
             }
+            
+            foreach (string currentSubType in  webSkinType.SubTypes)
+            {
+                if (currentSubType.Contains(webProvidedType, StringComparison.OrdinalIgnoreCase))
+                {
+                    return currentSubType;
+                }
+            }
+
+            return "Unknown";
         }
     }
 }
