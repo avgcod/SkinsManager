@@ -16,7 +16,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Avalonia;
 using SkinManager.Extensions;
 
 namespace SkinManager.ViewModels
@@ -26,7 +25,6 @@ namespace SkinManager.ViewModels
     {
         #region Variables
 
-        private readonly Locations _locations;
         private readonly SkinsAccessService _skinsAccessService;
         private readonly FileAccessService _fileAccessService;
         private readonly Window _currentWindow;
@@ -108,13 +106,11 @@ namespace SkinManager.ViewModels
 
         #endregion
 
-        public MainWindowViewModel(IServiceScopeFactory scopeFactory, MainWindow currentWindow, Locations locations,
+        public MainWindowViewModel(IServiceScopeFactory scopeFactory, MainWindow currentWindow,
             SkinsAccessService skinsAccessService, FileAccessService fileAccessService,
             IMessenger theMessenger) : base(theMessenger)
         {
             _scopeFactory = scopeFactory;
-
-            _locations = locations;
 
             _currentWindow = currentWindow;
             _fileAccessService = fileAccessService;

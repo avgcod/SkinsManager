@@ -217,7 +217,7 @@ public class UniversePSWebAccessService : ISkinsAccessService
                     (
                         webSkinType.Name, currentSkinSubType, currentSkinName,
                         [currentSkinDownloadLink], currentAuthor, description, currentDate, currentDate,
-                        currenSkinScreenshots
+                        currenSkinScreenshots,SkinsSource.UniversPS
                     );
                     foundSkins.Add(tempSkin);
                 }

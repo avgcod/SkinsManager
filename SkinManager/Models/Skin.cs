@@ -12,12 +12,13 @@ public record Skin(
     string Description,
     DateOnly CreationDate,
     DateOnly LastUpdatedDate,
-    List<string> Screenshots)
+    List<string> Screenshots,
+    SkinsSource Source)
 {
     public static Skin Create(string skinType, string subType, string name, IEnumerable<string> locations, string author,
         string description,
-        DateOnly creationDate, DateOnly lastUpdatedDate, IEnumerable<string> screenshots)
-        => new Skin(skinType, subType, name, [..locations], author, description, creationDate, lastUpdatedDate, [..screenshots]);
+        DateOnly creationDate, DateOnly lastUpdatedDate, IEnumerable<string> screenshots, SkinsSource source)
+        => new Skin(skinType, subType, name, [..locations], author, description, creationDate, lastUpdatedDate, [..screenshots], source);
 
     public override string ToString()
     {

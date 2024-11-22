@@ -68,7 +68,7 @@ public class LocalSkinsAccessService(IMessenger theMessenger)
         DateOnly lastUpdatedDate = DateOnly.FromDateTime(skinDirectory.LastWriteTime);
 
         return Skin.Create(skinType, subType, skinInfo.Name, [skinDirectory.FullName], skinInfo.Author,
-            skinInfo.Description, creationDate, lastUpdatedDate, screenshots);
+            skinInfo.Description, creationDate, lastUpdatedDate, screenshots, SkinsSource.Local);
     }
 
     private async Task<IEnumerable<string>> GetScreenShots(string screenshotsFolder)

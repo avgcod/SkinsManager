@@ -167,7 +167,7 @@ namespace SkinManager.Services
                             (
                                 webSkinType.Name, currentSkinSubType, currentSkinName,
                                 currentDownloadLinks, currentAuthor, description, currentDate, currentDate,
-                                currentScreenshots
+                                currentScreenshots, SkinsSource.Ephinea
                             );
 
                             foundSkins.Add(tempSkin);
@@ -179,7 +179,7 @@ namespace SkinManager.Services
                             (
                                 webSkinType.Name, currentSkinSubType, currentSkinName,
                                 currentDownloadLinks, currentAuthor, description, currentDate, currentDate,
-                                []
+                                [], SkinsSource.Ephinea
                             );
 
                             foundSkins.Add(tempSkin);

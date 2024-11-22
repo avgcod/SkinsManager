@@ -56,7 +56,10 @@ namespace SkinManager.Services
             {
                 await Task.Run(() =>
                 {
-                    foreach (DirectoryInfo folder in new DirectoryInfo(skinDirectoryName).GetDirectories("*.*", SearchOption.AllDirectories))
+                    IEnumerable<DirectoryInfo> directories = new DirectoryInfo(skinDirectoryName)
+                        .GetDirectories("*.*", SearchOption.AllDirectories)
+                        .Where(x => x.Name != "Screenshots");
+                    foreach (DirectoryInfo folder in directories)
                     {
                         foreach (FileInfo theFile in folder.GetFiles())
                         {
