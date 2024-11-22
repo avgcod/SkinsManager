@@ -14,7 +14,8 @@ namespace SkinManager.Models
     }
     public enum SkinsSource
     {
+        Ephinea,
         Local,
-        Web
+        UniversPS
     }
 }

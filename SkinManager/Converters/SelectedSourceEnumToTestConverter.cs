@@ -12,21 +12,17 @@ namespace SkinManager.Converters
 {
     public class SelectedSourceEnumToTestConverter : IValueConverter
     {
-        private string lastSource = string.Empty;
+        private string _lastSource = string.Empty;
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if(value is null)
             {
                 return string.Empty;
             }
-            if (value is { } enumValue)
-            {
-                lastSource = ((SkinsSource)enumValue).ToString();
-                return ((SkinsSource)enumValue).ToString();
-            }
             else
             {
-                return lastSource;
+                _lastSource = ((SkinsSource)value).ToString();
+                return _lastSource;
             }
         }
 
@@ -34,13 +30,10 @@ namespace SkinManager.Converters
         {
             if (value is { } comboBoxItem)
             {
-                lastSource = ((ComboBoxItem)comboBoxItem)?.Content as string ?? string.Empty;
-                return Enum.Parse<SkinsSource>(lastSource);
+                _lastSource = (comboBoxItem as string)!;
             }
-            else
-            {
-                return Enum.Parse<SkinsSource>(lastSource);
-            }
+            
+            return Enum.Parse<SkinsSource>(_lastSource!);
         }
     }
 }

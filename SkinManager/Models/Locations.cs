@@ -1,4 +1,4 @@
 ﻿namespace SkinManager.Models
 {
-    public record Locations(string GameInfoFile, string KnownGamesFile);
+    public record Locations(string GameInfoFile, string WebSkinsFile);
 }

@@ -60,18 +60,17 @@ namespace SkinManager
             => configurationBuilder.AddUserSecrets(typeof(App).Assembly))
         .ConfigureServices((hostContext, services) =>
         {
-            services.AddSingleton(new Locations("GameInfo.json", "KnownGames.json"));
+            services.AddSingleton(new Locations("GameInfo.json", "WebSkins.json"));
 
             services.AddSingleton(new HttpClient());
 
             services.AddSingleton<FileAccessService>();
-            services.AddSingleton<IFileAccessService, FileAccessService>(provider => provider.GetRequiredService<FileAccessService>());
 
-            services.AddSingleton<ISkinsAccessService, SkinsAccessService>();
+            services.AddSingleton<SkinsAccessService>();
 
             services.AddSingleton<LocalSkinsAccessService>();
 
-            services.AddSingleton<PSOUniversePSWebAccessService>();
+            services.AddSingleton<UniversePSWebAccessService>();
             services.AddSingleton<EphineaWebAccessService>();
 
             services.AddSingleton<HttpClient>();
@@ -81,9 +80,6 @@ namespace SkinManager
 
             services.AddSingleton<StrongReferenceMessenger>();
             services.AddSingleton<IMessenger, StrongReferenceMessenger>(provider => provider.GetRequiredService<StrongReferenceMessenger>());
-
-            services.AddScoped<AddGameView>();
-            services.AddScoped<AddGameViewModel>();
 
             services.AddScoped<MessageBoxView>();
             services.AddScoped<MessageBoxViewModel>();

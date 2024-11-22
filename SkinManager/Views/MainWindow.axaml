@@ -5,8 +5,8 @@
     xmlns:converters="using:SkinManager.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:models="using:SkinManager.Models"
     xmlns:vm="using:SkinManager.ViewModels"
+    xmlns:models="using:SkinManager.Models"
     Title="Skin Manager"
     Width="675"
     Height="650"
@@ -54,46 +54,36 @@
                 <ColumnDefinition Width="auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-
+            
             <TextBlock
                 Grid.Row="0"
                 Grid.Column="0"
                 VerticalAlignment="Center"
-                Text="Game:" />
+                Text="Web Source:" />
+
             <ComboBox
-                x:Name="gamesListcbx"
                 Grid.Row="0"
                 Grid.Column="1"
-                MinWidth="225"
-                Margin="0,0,0,5"
-                ItemsSource="{Binding GamesList}"
-                SelectedItem="{Binding SelectedGameName}" />
-
-            <TextBlock
-                Grid.Row="0"
-                Grid.Column="2"
-                Margin="2,0,0,0"
-                VerticalAlignment="Center"
-                Text="Source:" />
-
-            <ComboBox
-                x:Name="skinsSourceCbx"
-                Grid.Row="0"
-                Grid.Column="3"
                 MinWidth="100"
                 VerticalAlignment="Center"
-                IsEnabled="{Binding GameIsKnown}"
-                SelectedItem="{Binding SelectedSource, Converter={StaticResource SelectedSourceEnumToTestConverter}}">
-                <ComboBoxItem Content="Local" />
-                <ComboBoxItem Content="Web" />
-            </ComboBox>
+                SelectedItem="{Binding SelectedSource, Converter={StaticResource SelectedSourceEnumToTestConverter}}"
+                ItemsSource="{Binding WebSources}"
+                SelectedIndex="1">
+                </ComboBox>
+            
+            <Button
+                Grid.Row="0"
+                Grid.Column="2"
+                HorizontalAlignment="Center"
+                Command="{Binding RefreshLocalSkins}"
+                Content="Refresh Local Skins" />
 
             <Button
                 Grid.Row="0"
                 Grid.Column="4"
                 HorizontalAlignment="Center"
-                Command="{Binding AddNewGameCommand}"
-                Content="Add Game" />
+                Command="{Binding RefreshWebSkinsCommand}"
+                Content="Refresh Web Skins" />
 
             <TextBlock
                 Grid.Row="1"
@@ -165,15 +155,6 @@
                 Command="{Binding BrowseExecutableCommand}"
                 Content="Browse" />
 
-            <Button
-                Grid.Row="4"
-                Grid.Column="1"
-                Grid.ColumnSpan="3"
-                Margin="0,5,0,0"
-                HorizontalAlignment="Center"
-                Command="{Binding ReloadSkinsCommand}"
-                Content="Reload Skins" />
-
             <TextBlock
                 Grid.Row="5"
                 Grid.Column="0"
@@ -220,45 +201,38 @@
                 Margin="0,5"
                 HorizontalAlignment="Center"
                 Text="{Binding AppliedSkinName}" />
-
-            <TextBlock
+            
+            <Image
                 Grid.Row="8"
                 Grid.Column="0"
-                Text="Available Skins:" />
+                MinWidth="100"
+                MinHeight="150"
+                MaxWidth="150"
+                Margin="0,0. 2, 0"
+                Source="{Binding Screenshot1}"
+                Stretch="UniformToFill" />
+
+            
 
             <ListBox
                 Grid.Row="8"
                 Grid.Column="1"
-                MaxWidth="200"
+                Grid.ColumnSpan="2"
+                MinWidth="200"
+                Width="{Binding AvailableSkinNames}"
                 MaxHeight="250"
                 HorizontalAlignment="Center"
                 ItemsSource="{Binding AvailableSkinNames}"
                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
                 ScrollViewer.VerticalScrollBarVisibility="Auto"
                 SelectedItem="{Binding SelectedSkinName}" />
-
-            <TextBlock
-                Grid.Row="8"
-                Grid.Column="2"
-                Grid.ColumnSpan="2"
-                HorizontalAlignment="Center"
-                Text="Screenshots:" />
-
+            
             <Image
                 Grid.Row="8"
-                Grid.Column="2"
-                Grid.ColumnSpan="2"
+                Grid.Column="3"
                 MinWidth="100"
                 MinHeight="150"
-                Margin="5,0"
-                Source="{Binding Screenshot1}"
-                Stretch="UniformToFill" />
-
-            <Image
-                Grid.Row="8"
-                Grid.Column="4"
-                MinWidth="100"
-                MinHeight="150"
+                MaxWidth="150"
                 Source="{Binding Screenshot2}"
                 Stretch="UniformToFill" />
 
@@ -266,26 +240,26 @@
                 Grid.Row="9"
                 Grid.Column="1"
                 Grid.ColumnSpan="3"
-                Margin="0,0,0,10"
+                Margin="2,0,0,1"
                 HorizontalAlignment="Center"
                 Command="{Binding ApplySkinCommand}"
-                Content="{Binding AppySkinButtonText}" />
+                Content="{Binding ApplySkinButtonText}" />
 
 
             <Button
-                Grid.Row="10"
+                Grid.Row="9"
                 Grid.Column="0"
                 Command="{Binding CreateBackupCommand}"
                 Content="Backup" />
 
             <Button
-                Grid.Row="10"
+                Grid.Row="9"
                 Grid.Column="1"
                 Command="{Binding RestoreCommand}"
                 Content="Restore" />
 
             <Button
-                Grid.Row="10"
+                Grid.Row="9"
                 Grid.Column="2"
                 HorizontalAlignment="Center"
                 Command="{Binding CreateStructureCommand}"
@@ -293,7 +267,7 @@
                 IsVisible="{Binding !StructureCreated}" />
 
             <Button
-                Grid.Row="10"
+                Grid.Row="9"
                 Grid.Column="4"
                 Command="{Binding StartGameAsync}"
                 Content="Start Game" />

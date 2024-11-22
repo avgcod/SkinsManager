@@ -41,9 +41,6 @@
 
 
   <ItemGroup>
-    <None Update="Data\KnownGames.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="Data\GameInfo.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

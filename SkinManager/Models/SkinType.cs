@@ -6,39 +6,16 @@ using System.Text;
 
 namespace SkinManager.Models;
 
-/*
-public class SkinType
+public record SkinType(string Name, List<string> SubTypes, Dictionary<SkinsSource, DateOnly> LastOnlineChecks)
 {
-    public string Name { get; init; }
-    public List<string> SubTypes { get; init; }
-        
-    private SkinType(string name, List<string> subTypes)
-    {
-        Name = name;
-        SubTypes = subTypes;
-    }
-
-    public static SkinType Create(string name, List<string> subTypes)
-        => new SkinType(name, subTypes);
-
-    public override string ToString()
-    {
-        return $"This is skin type {Name}.";
-    }
-
-}
-*/
-
-public record SkinType(string Name, List<string> SubTypes, DateOnly LastOnlineCheck)
-{
-    public static SkinType Create(string name, List<string> subTypes, DateOnly lastOnlineCheck)
-        => new SkinType(name, subTypes, lastOnlineCheck);
+    public static SkinType Create(string name, List<string> subTypes,  Dictionary<SkinsSource, DateOnly> lastOnlineChecks)
+        => new SkinType(name, subTypes, lastOnlineChecks);
 
     public override string ToString()
     {
         StringBuilder fullString = new StringBuilder();
         
-        fullString.Append($"This is skin type {Name} and it was last checked on {LastOnlineCheck}. The subtypes are ");
+        fullString.Append($"This is skin type {Name} and it was last checked on {LastOnlineChecks}. The subtypes are ");
         
         foreach (string subType in SubTypes)
         {
