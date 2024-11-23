@@ -15,9 +15,14 @@ namespace SkinManager.Services
     /// <summary>
     /// This class facilitates local file system access.
     /// </summary>
-    public class FileAccessService(IMessenger theMessenger)
+    public static class FileAccessService
     {
-        private readonly IMessenger _theMessenger = theMessenger;
+        private static IMessenger _theMessenger = default!;
+
+        public static void Initialize(IMessenger messenger)
+        {
+            _theMessenger = messenger;
+        }
 
         /// <summary>
         /// Copies all files in a skin folder, including subfolders, to the game folder.
@@ -25,22 +30,28 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="skinDirectoryName">Directory the skin is located in.</param>
         /// <param name="gameDirectoryName">Directory the game is located in.</param>
-        public void ApplySkin(string skinDirectoryName, string gameDirectoryName)
+        public static async Task<bool> ApplySkin(string skinDirectoryName, string gameDirectoryName)
         {
             try
             {
-                foreach (DirectoryInfo folder in new DirectoryInfo(skinDirectoryName).GetDirectories("*.*", SearchOption.AllDirectories))
+                await Task.Run(() =>
                 {
-                    foreach (FileInfo theFile in folder.GetFiles())
+                    foreach (DirectoryInfo folder in new DirectoryInfo(skinDirectoryName).GetDirectories("*.*", SearchOption.AllDirectories))
                     {
-                        File.Copy(theFile.FullName, Path.Combine(gameDirectoryName, folder.FullName.Replace(skinDirectoryName, string.Empty),
-                            theFile.Name), true);
+                        foreach (FileInfo theFile in folder.GetFiles())
+                        {
+                            File.Copy(theFile.FullName, Path.Combine(gameDirectoryName, folder.FullName.Replace(skinDirectoryName, string.Empty),
+                                theFile.Name), true);
+                        }
                     }
-                }
+                });
+
+                return true;
             }
             catch (Exception ex)
             {
                 _theMessenger.Send(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                return false;
             }
         }
 
@@ -50,7 +61,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="skinDirectoryName">Directory the skin is located in.</param>
         /// <param name="gameDirectoryName">Directory the game is located in.</param>
-        public async Task ApplySkinAsync(string skinDirectoryName, string gameDirectoryName)
+        public static async Task ApplySkinAsync(string skinDirectoryName, string gameDirectoryName)
         {
             try
             {
@@ -81,7 +92,7 @@ namespace SkinManager.Services
         /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="directoryName">Directory to create.</param>
-        private void CreateFolder(string directoryName)
+        private static void CreateFolder(string directoryName)
         {
             if (!Directory.Exists(directoryName))
             {
@@ -101,7 +112,7 @@ namespace SkinManager.Services
         /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="directoryName">Directory to create.</param>
-        private async Task CreateFolderAsync(string directoryName)
+        private static async Task CreateFolderAsync(string directoryName)
         {
             if (!await DirectoryExistsAsync(directoryName))
             {
@@ -123,7 +134,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="skinTypes">Collection of SkinType.</param>
         /// <param name="skinsFolderName">Directory for the structure to be created in.</param>
-        public void CreateStructure(IEnumerable<SkinType> skinTypes, string skinsFolderName)
+        public static void CreateStructure(IEnumerable<SkinType> skinTypes, string skinsFolderName)
         {
             if (IsEmptyDirectory(skinsFolderName))
             {
@@ -157,7 +168,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="skinTypes">Collection of SkinType.</param>
         /// <param name="skinsFolderName">Directory for the structure to be created in.</param>
-        public async Task CreateStructureAsync(IEnumerable<SkinType> skinTypes, string skinsFolderName)
+        public static async Task CreateStructureAsync(IEnumerable<SkinType> skinTypes, string skinsFolderName)
         {
             if (await IsEmptyDirectoryAsync(skinsFolderName))
             {
@@ -194,7 +205,7 @@ namespace SkinManager.Services
         /// <param name="skinDirectoryName">Directory of the skin.</param>
         /// <param name="backUpDirectoryName">Directory to store the backup.</param>
         /// <param name="gameDirectoryName">Directory of the game.</param>
-        public void CreateBackUp(string skinDirectoryName, string backUpDirectoryName, string gameDirectoryName)
+        public static void CreateBackUp(string skinDirectoryName, string backUpDirectoryName, string gameDirectoryName)
         {
             try
             {
@@ -224,7 +235,7 @@ namespace SkinManager.Services
         /// <param name="skinDirectoryName">Directory of the skin.</param>
         /// <param name="backUpDirectoryName">Directory to store the backup.</param>
         /// <param name="gameDirectoryName">Directory of the game.</param>
-        public async Task CreateBackUpAsync(string skinDirectoryName, string backUpDirectoryName, string gameDirectoryName)
+        public static async Task CreateBackUpAsync(string skinDirectoryName, string backUpDirectoryName, string gameDirectoryName)
         {
             try
             {
@@ -257,7 +268,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="skinDirectoryName">The back-up location.</param>
         /// <param name="gameDirectoryName">The game installation location.</param>
-        public bool RestoreBackup(string skinDirectoryName, string gameDirectoryName)
+        public static bool RestoreBackup(string skinDirectoryName, string gameDirectoryName)
         {
             try
             {
@@ -293,7 +304,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="skinDirectoryName">The back-up location.</param>
         /// <param name="gameDirectoryName">The game installation location.</param>
-        public async Task<bool> RestoreBackupAsync(string skinDirectoryName, string gameDirectoryName)
+        public static async Task<bool> RestoreBackupAsync(string skinDirectoryName, string gameDirectoryName)
         {
             try
             {
@@ -332,7 +343,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="fileName">File name.</param>
         /// <returns>If the file exists.</returns>
-        private async Task<bool> FileExistsAsync(string fileName)
+        private static async Task<bool> FileExistsAsync(string fileName)
         {
             try
             {
@@ -351,7 +362,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="directoryName">Directory name.</param>
         /// <returns>If the directory exists.</returns>
-        private async Task<bool> DirectoryExistsAsync(string directoryName)
+        private static async Task<bool> DirectoryExistsAsync(string directoryName)
         {
             try
             {
@@ -369,7 +380,7 @@ namespace SkinManager.Services
         /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="fileLocation">Game executable location.</param>
-        public void StartGame(string fileLocation)
+        public static void StartGame(string fileLocation)
         {
             if (File.Exists(fileLocation))
             {
@@ -396,7 +407,7 @@ namespace SkinManager.Services
         /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="fileLocation">Game executable location.</param>
-        public async Task StartGameAsync(string fileLocation)
+        public static async Task StartGameAsync(string fileLocation)
         {
             if (await FileExistsAsync(fileLocation))
             {
@@ -418,7 +429,7 @@ namespace SkinManager.Services
             }
         }
 
-        public async Task<bool> ExtractSkin(string archivePath, string destinationLocation)
+        public static async Task<bool> ExtractSkin(string archivePath, string destinationLocation)
         {
             
             if (await FileExistsAsync(archivePath))
@@ -465,7 +476,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="gameInfoFileName">File to load.</param>
         /// <returns>Collection of GameInfo.</returns>
-        public async Task<GameInfo> LoadGameInfo(string gameInfoFileName)
+        public static async Task<GameInfo> LoadGameInfo(string gameInfoFileName)
         {
             try
             {
@@ -490,7 +501,7 @@ namespace SkinManager.Services
             }
         }
         
-        public async Task<IEnumerable<Skin>> LoadWebSkins(string webSkinsFileName)
+        public static async Task<IEnumerable<Skin>> LoadWebSkins(string webSkinsFileName)
         {
             try
             {
@@ -520,7 +531,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="gameInfo">Collection of GameInfo to save.</param>
         /// <param name="gameInfoFileName">File to save to.</param>
-        public async Task SaveGameInfo(GameInfo gameInfo, string gameInfoFileName)
+        public static async Task SaveGameInfo(GameInfo gameInfo, string gameInfoFileName)
         {
             try
             {
@@ -533,7 +544,7 @@ namespace SkinManager.Services
             }
         }
 
-        public async Task SaveWebSkins(IEnumerable<Skin> webSkins, string webSkinsFileName)
+        public static async Task SaveWebSkins(IEnumerable<Skin> webSkins, string webSkinsFileName)
         {
             try
             {
@@ -546,7 +557,7 @@ namespace SkinManager.Services
             }
         }
 
-        public async Task SaveScreenshot(string path, IEnumerable<string> screenshots)
+        public static async Task SaveScreenshot(string path, IEnumerable<string> screenshots)
         {
             try
             {

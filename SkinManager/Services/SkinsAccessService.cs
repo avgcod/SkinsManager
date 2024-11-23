@@ -13,7 +13,6 @@ namespace SkinManager.Services;
 
 public class SkinsAccessService(
     IServiceScopeFactory scopeFactory,
-    FileAccessService fileAccessService,
     HttpClient httpClient,
     Locations locations)
 {
@@ -81,7 +80,7 @@ public class SkinsAccessService(
         Skin currentSkin = _gameSkins.First(x => x.Name == skinName);
         _gameSkins.Remove(currentSkin);
 
-        currentSkin = currentSkin with { Locations = [newLocalSkinPath] };
+        currentSkin = currentSkin with { Locations = [newLocalSkinPath], Source = SkinsSource.Local};
         
         _gameSkins.Add(currentSkin);
     }
@@ -91,7 +90,7 @@ public class SkinsAccessService(
         foreach (var screenshot in screenshots)
         {
             string path = Path.Combine(_psoGame.SkinsLocation, skin.SkinType, skin.SubType, skin.Name,"Screenshots");
-            await fileAccessService.SaveScreenshot(path, screenshots);
+            await FileAccessService.SaveScreenshot(path, screenshots);
         }
     }
 
@@ -177,6 +176,13 @@ public class SkinsAccessService(
         return "None";
     }
 
+    public async Task<bool> ApplySkin(string skinName, bool isEphinea)
+    {
+        string skinDirectory = _gameSkins.First(x => x.Name == skinName).Locations[0];
+        string gameDirectory = _psoGame.GameLocation;
+        return await FileAccessService.ApplySkin(skinDirectory, gameDirectory);
+    }
+
     public IEnumerable<SkinType> GetSkinTypes()
     {
         return _psoGame.SkinTypes;
@@ -226,14 +232,14 @@ public class SkinsAccessService(
     {
         Skin currentSkin = _gameSkins.First(x => x.Name == skinName);
         string destination = Path.Combine(_psoGame.SkinsLocation, currentSkin.SkinType, currentSkin.SubType, currentSkin.Name);
-        return await fileAccessService.ExtractSkin(archivePath, destination);
+        return await FileAccessService.ExtractSkin(archivePath, destination);
     }
 
     public async Task LoadInformation()
     {
-        _psoGame = await fileAccessService.LoadGameInfo(locations.GameInfoFile);
+        _psoGame = await FileAccessService.LoadGameInfo(locations.GameInfoFile);
 
-        UpdateSkins(await fileAccessService.LoadWebSkins(locations.WebSkinsFile));
+        UpdateSkins(await FileAccessService.LoadWebSkins(locations.WebSkinsFile));
     }
 
     public void RemoveAppliedSkin(string removedSkinName)
@@ -246,8 +252,8 @@ public class SkinsAccessService(
     {
         List<Task> tasks =
         [
-            fileAccessService.SaveWebSkins(_gameSkins, locations.WebSkinsFile),
-            fileAccessService.SaveGameInfo(_psoGame, locations.GameInfoFile)
+            FileAccessService.SaveWebSkins(_gameSkins, locations.WebSkinsFile),
+            FileAccessService.SaveGameInfo(_psoGame, locations.GameInfoFile)
         ];
         await Task.WhenAll(tasks);
     }

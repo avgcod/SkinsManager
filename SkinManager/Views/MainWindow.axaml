@@ -60,16 +60,17 @@
                 Grid.Column="0"
                 VerticalAlignment="Center"
                 Text="Web Source:" />
-
-            <ComboBox
-                Grid.Row="0"
-                Grid.Column="1"
-                MinWidth="100"
-                VerticalAlignment="Center"
-                SelectedItem="{Binding SelectedSource, Converter={StaticResource SelectedSourceEnumToTestConverter}}"
-                ItemsSource="{Binding WebSources}"
-                SelectedIndex="1">
+            
+            <StackPanel Grid.Column="1" Grid.Row="0" Orientation="Horizontal" Margin="5 0 0 0" >
+                <ComboBox
+                    MinWidth="100"
+                    VerticalAlignment="Center"
+                    SelectedItem="{Binding SelectedSource, Converter={StaticResource SelectedSourceEnumToTestConverter}}"
+                    ItemsSource="{Binding WebSources}"
+                    SelectedIndex="1">
                 </ComboBox>
+                <CheckBox Content="Ephinea Server" IsChecked="{Binding IsEphinea}"/>
+            </StackPanel>
             
             <Button
                 Grid.Row="0"

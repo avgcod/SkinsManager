@@ -36,6 +36,8 @@ namespace SkinManager
                 // Line below is needed to remove Avalonia data validation.
                 // Without this line you will get duplicate validations from both Avalonia and CT
                 BindingPlugins.DataValidators.RemoveAt(0);
+                
+                FileAccessService.Initialize(_host.Services.GetRequiredService<StrongReferenceMessenger>());
 
                 desktop.MainWindow = _host.Services.GetRequiredService<MainWindow>();
                 desktop.MainWindow.DataContext = _host.Services.GetRequiredService<MainWindowViewModel>();
@@ -63,8 +65,6 @@ namespace SkinManager
             services.AddSingleton(new Locations("GameInfo.json", "WebSkins.json"));
 
             services.AddSingleton(new HttpClient());
-
-            services.AddSingleton<FileAccessService>();
 
             services.AddSingleton<SkinsAccessService>();
 

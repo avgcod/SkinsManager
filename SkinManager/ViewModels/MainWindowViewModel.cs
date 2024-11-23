@@ -26,7 +26,6 @@ namespace SkinManager.ViewModels
         #region Variables
 
         private readonly SkinsAccessService _skinsAccessService;
-        private readonly FileAccessService _fileAccessService;
         private readonly Window _currentWindow;
         private readonly IServiceScopeFactory _scopeFactory;
         private bool _cleanShutdown = true;
@@ -56,6 +55,7 @@ namespace SkinManager.ViewModels
         [ObservableProperty] private string _skinsLocation = string.Empty;
         [ObservableProperty] private string _gameExecutableLocation = string.Empty;
         [ObservableProperty] private string _gameLocation = string.Empty;
+        [ObservableProperty] private bool _isEphinea = true;
 
         [ObservableProperty] private SkinsSource _selectedSource;
 
@@ -107,13 +107,11 @@ namespace SkinManager.ViewModels
         #endregion
 
         public MainWindowViewModel(IServiceScopeFactory scopeFactory, MainWindow currentWindow,
-            SkinsAccessService skinsAccessService, FileAccessService fileAccessService,
-            IMessenger theMessenger) : base(theMessenger)
+            SkinsAccessService skinsAccessService, IMessenger theMessenger) : base(theMessenger)
         {
             _scopeFactory = scopeFactory;
 
             _currentWindow = currentWindow;
-            _fileAccessService = fileAccessService;
             _skinsAccessService = skinsAccessService;
 
             PropertyChanged += SkinManagerViewModel_PropertyChanged;
@@ -295,7 +293,7 @@ namespace SkinManager.ViewModels
 
         private async Task RefreshLocalSkinsAsync()
         {
-            _skins = [..(await _skinsAccessService.RefreshLocalSkinsAsync()).OrderBy(x => x.IsWebSkin()).ThenBy(x => x.Name)];
+            _skins = [..(await _skinsAccessService.RefreshLocalSkinsAsync()).OrderBy(x => x.Name)];
 
             StructureCreated = _skins.Count != 0;
 
@@ -345,7 +343,7 @@ namespace SkinManager.ViewModels
             if (!_webSkinSelected)
             {
                 ProcessingText = "Applying skin. Please wait.";
-                await _fileAccessService.ApplySkinAsync(SelectedSkinLocation.First(), GameLocation);
+                await _skinsAccessService.ApplySkin(SelectedSkinName, IsEphinea);
                 AddAppliedSkin(SelectedSkinName);
             }
             else
@@ -413,7 +411,7 @@ namespace SkinManager.ViewModels
             Busy = true;
 
             ProcessingText = "Creating backup. Please wait.";
-            await _fileAccessService.CreateBackUpAsync(SelectedSkinLocation.First(), BackUpLocation, GameLocation);
+            await FileAccessService.CreateBackUpAsync(SelectedSkinLocation.First(), BackUpLocation, GameLocation);
 
             Busy = false;
         }
@@ -455,8 +453,8 @@ namespace SkinManager.ViewModels
             Busy = true;
 
             ProcessingText = "Creating folder structure. Please wait.";
-            //await _fileAccessService.CreateStructureAsync(_skins.Select(x => x.SkinType).DistinctBy(x => x.Name), SkinsLocation);
-            await _fileAccessService.CreateStructureAsync(_skinsAccessService.GetSkinTypes(), SkinsLocation);
+            //await FileAccessService.CreateStructureAsync(_skins.Select(x => x.SkinType).DistinctBy(x => x.Name), SkinsLocation);
+            await FileAccessService.CreateStructureAsync(_skinsAccessService.GetSkinTypes(), SkinsLocation);
 
             StructureCreated = true;
 
@@ -494,7 +492,7 @@ namespace SkinManager.ViewModels
 
             ProcessingText = "Restoring from backup. Please wait.";
 
-            if (await _fileAccessService.RestoreBackupAsync(BackUpLocation, GameLocation))
+            if (await FileAccessService.RestoreBackupAsync(BackUpLocation, GameLocation))
             {
                 RemoveAppliedSkin(SelectedSkinName);
             }
@@ -508,7 +506,7 @@ namespace SkinManager.ViewModels
             Busy = true;
 
             ProcessingText = "Starting the game. Please wait.";
-            await _fileAccessService.StartGameAsync(GameExecutableLocation);
+            await FileAccessService.StartGameAsync(GameExecutableLocation);
 
             Busy = false;
         }
