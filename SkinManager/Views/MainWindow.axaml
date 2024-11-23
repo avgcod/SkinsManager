@@ -61,30 +61,28 @@
                 VerticalAlignment="Center"
                 Text="Web Source:" />
             
-            <StackPanel Grid.Column="1" Grid.Row="0" Orientation="Horizontal" Margin="5 0 0 0" >
-                <ComboBox
-                    MinWidth="100"
-                    VerticalAlignment="Center"
-                    SelectedItem="{Binding SelectedSource, Converter={StaticResource SelectedSourceEnumToTestConverter}}"
-                    ItemsSource="{Binding WebSources}"
-                    SelectedIndex="1">
-                </ComboBox>
-                <CheckBox Content="Ephinea Server" IsChecked="{Binding IsEphinea}"/>
-            </StackPanel>
+            <ComboBox
+                Grid.Column="1" Grid.Row="0"
+                MinWidth="100"
+                VerticalAlignment="Center"
+                SelectedItem="{Binding SelectedSource, Converter={StaticResource SelectedSourceEnumToTestConverter}}"
+                ItemsSource="{Binding WebSources}"
+                SelectedIndex="1">
+            </ComboBox>
             
             <Button
                 Grid.Row="0"
                 Grid.Column="2"
                 HorizontalAlignment="Center"
                 Command="{Binding RefreshLocalSkins}"
-                Content="Refresh Local Skins" />
+                Content="Refresh Local" />
 
             <Button
                 Grid.Row="0"
                 Grid.Column="4"
                 HorizontalAlignment="Center"
                 Command="{Binding RefreshWebSkinsCommand}"
-                Content="Refresh Web Skins" />
+                Content="Refresh Web" />
 
             <TextBlock
                 Grid.Row="1"

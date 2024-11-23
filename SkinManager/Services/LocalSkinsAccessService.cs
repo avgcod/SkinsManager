@@ -85,7 +85,7 @@ public class LocalSkinsAccessService(IMessenger theMessenger)
 
     private static (string name, string description, string author) GetSkinNameAndDescription(string skinDirectoryName, string subTypeDirectoryName)
     {
-        if (skinDirectoryName.Contains("_by_", StringComparison.Ordinal))
+        if (skinDirectoryName.Contains("_by_", StringComparison.OrdinalIgnoreCase))
         {
             int authorStartIndex = skinDirectoryName.IndexOf("_by_", StringComparison.Ordinal);
             

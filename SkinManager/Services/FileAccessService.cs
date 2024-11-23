@@ -30,7 +30,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="skinDirectoryName">Directory the skin is located in.</param>
         /// <param name="gameDirectoryName">Directory the game is located in.</param>
-        public static async Task<bool> ApplySkin(string skinDirectoryName, string gameDirectoryName)
+        public static async Task<bool> ApplySkinAsync(string skinDirectoryName, string gameDirectoryName)
         {
             try
             {
@@ -40,8 +40,8 @@ namespace SkinManager.Services
                     {
                         foreach (FileInfo theFile in folder.GetFiles())
                         {
-                            File.Copy(theFile.FullName, Path.Combine(gameDirectoryName, folder.FullName.Replace(skinDirectoryName, string.Empty),
-                                theFile.Name), true);
+                            string destinationPath = Path.Combine(gameDirectoryName, folder.Name, theFile.Name);
+                            File.Copy(theFile.FullName, destinationPath, true);
                         }
                     }
                 });
@@ -56,63 +56,11 @@ namespace SkinManager.Services
         }
 
         /// <summary>
-        /// Copies all files in a skin folder, including subfolders, to the game folder.
-        /// Send a OperationErrorMessage if an error occurs.
-        /// </summary>
-        /// <param name="skinDirectoryName">Directory the skin is located in.</param>
-        /// <param name="gameDirectoryName">Directory the game is located in.</param>
-        public static async Task ApplySkinAsync(string skinDirectoryName, string gameDirectoryName)
-        {
-            try
-            {
-                await Task.Run(() =>
-                {
-                    IEnumerable<DirectoryInfo> directories = new DirectoryInfo(skinDirectoryName)
-                        .GetDirectories("*.*", SearchOption.AllDirectories)
-                        .Where(x => x.Name != "Screenshots");
-                    foreach (DirectoryInfo folder in directories)
-                    {
-                        foreach (FileInfo theFile in folder.GetFiles())
-                        {
-                            File.Copy(theFile.FullName, Path.Combine(gameDirectoryName, folder.FullName.Replace(skinDirectoryName, string.Empty),
-                                theFile.Name), true);
-                        }
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                _theMessenger.Send(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-            }
-        }
-
-        #region Create Methods
-        /// <summary>
         /// Creates a folder.
         /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="directoryName">Directory to create.</param>
-        private static void CreateFolder(string directoryName)
-        {
-            if (!Directory.Exists(directoryName))
-            {
-                try
-                {
-                    Directory.CreateDirectory(directoryName);
-                }
-                catch (Exception ex)
-                {
-                    _theMessenger.Send(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-                }
-            }
-        }
-
-        /// <summary>
-        /// Creates a folder.
-        /// Send a OperationErrorMessage if an error occurs.
-        /// </summary>
-        /// <param name="directoryName">Directory to create.</param>
-        private static async Task CreateFolderAsync(string directoryName)
+        private static async Task<bool> CreateFolderAsync(string directoryName)
         {
             if (!await DirectoryExistsAsync(directoryName))
             {
@@ -123,42 +71,11 @@ namespace SkinManager.Services
                 catch (Exception ex)
                 {
                     _theMessenger.Send(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+                    return false;
                 }
             }
-        }
-
-        /// <summary>
-        /// Creates folder structure based on a collection of SkinType.
-        /// Send a OperationErrorMessage if an error occurs.
-        /// Send a DirectoryNotEmptyMessage if the folder is not empty.
-        /// </summary>
-        /// <param name="skinTypes">Collection of SkinType.</param>
-        /// <param name="skinsFolderName">Directory for the structure to be created in.</param>
-        public static void CreateStructure(IEnumerable<SkinType> skinTypes, string skinsFolderName)
-        {
-            if (IsEmptyDirectory(skinsFolderName))
-            {
-                try
-                {
-                    foreach (SkinType currentType in skinTypes)
-                    {
-                        CreateFolder(Path.Combine(skinsFolderName, currentType.Name));
-
-                        foreach (string subType in currentType.SubTypes)
-                        {
-                            CreateFolder(Path.Combine(skinsFolderName, currentType.Name, subType));
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _theMessenger.Send(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-                }
-            }
-            else
-            {
-                _theMessenger.Send(new DirectoryNotEmptyMessage(skinsFolderName));
-            }
+            
+            return true;
         }
 
         /// <summary>
@@ -174,15 +91,15 @@ namespace SkinManager.Services
             {
                 try
                 {
-                    await Task.Run(() =>
+                    await Task.Run(async () =>
                     {
                         foreach (SkinType currentType in skinTypes)
                         {
-                            CreateFolder(Path.Combine(skinsFolderName, currentType.Name));
+                            await CreateFolderAsync(Path.Combine(skinsFolderName, currentType.Name));
 
                             foreach (string subType in currentType.SubTypes)
                             {
-                                CreateFolder(Path.Combine(skinsFolderName, currentType.Name, subType));
+                                await CreateFolderAsync(Path.Combine(skinsFolderName, currentType.Name, subType));
                             }
                         }
                     });
@@ -197,36 +114,6 @@ namespace SkinManager.Services
                 _theMessenger.Send(new DirectoryNotEmptyMessage(skinsFolderName));
             }
         }
-
-        /// <summary>
-        /// Copies all files in a game directory, including subdirectories, that are in the skin folder, and subdirectories, to the back-up folder.
-        /// Send a OperationErrorMessage if an error occurs.
-        /// </summary>
-        /// <param name="skinDirectoryName">Directory of the skin.</param>
-        /// <param name="backUpDirectoryName">Directory to store the backup.</param>
-        /// <param name="gameDirectoryName">Directory of the game.</param>
-        public static void CreateBackUp(string skinDirectoryName, string backUpDirectoryName, string gameDirectoryName)
-        {
-            try
-            {
-                DirectoryInfo skinDirectory = new(skinDirectoryName);
-                DirectoryInfo[] subDirs = new DirectoryInfo(skinDirectoryName).GetDirectories("*.*", SearchOption.AllDirectories);
-
-                foreach (DirectoryInfo currentFolder in subDirs)
-                {
-                    CreateFolder(backUpDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty));
-                    foreach (FileInfo theFile in currentFolder.GetFiles())
-                    {
-                        File.Copy(gameDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name,
-                            backUpDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name, false);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _theMessenger.Send(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-            }
-        }
         
         /// <summary>
         /// Copies all files in a game directory, including subdirectories, that are in the skin folder, and subdirectories, to the back-up folder.
@@ -235,7 +122,7 @@ namespace SkinManager.Services
         /// <param name="skinDirectoryName">Directory of the skin.</param>
         /// <param name="backUpDirectoryName">Directory to store the backup.</param>
         /// <param name="gameDirectoryName">Directory of the game.</param>
-        public static async Task CreateBackUpAsync(string skinDirectoryName, string backUpDirectoryName, string gameDirectoryName)
+        public static async Task<bool> CreateBackUpAsync(string skinDirectoryName, string backUpDirectoryName, string gameDirectoryName)
         {
             try
             {
@@ -246,48 +133,21 @@ namespace SkinManager.Services
                 {
                     foreach (DirectoryInfo currentFolder in subDirs)
                     {
-                        await CreateFolderAsync(backUpDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty));
-                        foreach (FileInfo theFile in currentFolder.GetFiles())
+                        string newBackUpDirectoryName = Path.Combine(backUpDirectoryName, currentFolder.Name);
+                        if (await CreateFolderAsync(newBackUpDirectoryName))
                         {
-                            File.Copy(gameDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name,
-                                    backUpDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name, false);
+                            foreach (FileInfo theFile in currentFolder.GetFiles())
+                            {
+                                string backupFileName = Path.Combine(newBackUpDirectoryName, theFile.Name);
+                                string originalFileName = Path.Combine(gameDirectoryName,currentFolder.Name, theFile.Name);
+                                if (File.Exists(originalFileName))
+                                {
+                                    File.Copy(originalFileName, backupFileName, false);
+                                }
+                            }
                         }
                     }
                 });
-            }
-            catch (Exception ex)
-            {
-                _theMessenger.Send(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-            }
-        }
-        #endregion
-
-        /// <summary>
-        /// Restores backed up game files to the game installation location.
-        /// Send a OperationErrorMessage if an error occurs.
-        /// </summary>
-        /// <param name="skinDirectoryName">The back-up location.</param>
-        /// <param name="gameDirectoryName">The game installation location.</param>
-        public static bool RestoreBackup(string skinDirectoryName, string gameDirectoryName)
-        {
-            try
-            {
-                DirectoryInfo skinDirectory = new(skinDirectoryName);
-                DirectoryInfo[] subDirs = new DirectoryInfo(skinDirectoryName).GetDirectories("*.*", SearchOption.AllDirectories);
-
-                foreach (DirectoryInfo currentFolder in subDirs)
-                {
-                    foreach (FileInfo theFile in currentFolder.GetFiles())
-                    {
-                        string gameFileName = skinDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) +
-                            Path.DirectorySeparatorChar + theFile.Name;
-                        if (File.Exists(gameFileName))
-                        {
-                            File.Copy(skinDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name,
-                                gameFileName, true);
-                        }
-                    }
-                }
 
                 return true;
             }
@@ -302,14 +162,15 @@ namespace SkinManager.Services
         /// Restores backed up game files to the game installation location.
         /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
-        /// <param name="skinDirectoryName">The back-up location.</param>
+        /// <param name="backUpDirectoryName">The back-up location.</param>
         /// <param name="gameDirectoryName">The game installation location.</param>
-        public static async Task<bool> RestoreBackupAsync(string skinDirectoryName, string gameDirectoryName)
+        public static async Task<bool> RestoreBackupAsync(string backUpDirectoryName, string gameDirectoryName)
         {
             try
             {
-                DirectoryInfo skinDirectory = new(skinDirectoryName);
-                DirectoryInfo[] subDirs = await Task.Run(() => skinDirectory.GetDirectories("*.*", SearchOption.AllDirectories));
+                DirectoryInfo backupDirectory = new(backUpDirectoryName);
+                IEnumerable<DirectoryInfo> subDirs = await Task.Run(() => backupDirectory
+                                                                .GetDirectories("*.*", SearchOption.AllDirectories));
 
                 await Task.Run(async () =>
                 {
@@ -317,12 +178,10 @@ namespace SkinManager.Services
                     {
                         foreach (FileInfo theFile in currentFolder.GetFiles())
                         {
-                            string gameFileName = gameDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) +
-                            Path.DirectorySeparatorChar + theFile.Name;
+                            string gameFileName = Path.Combine(gameDirectoryName, currentFolder.Name, theFile.Name);
                             if (await FileExistsAsync(gameFileName))
                             {
-                                File.Copy(skinDirectoryName + currentFolder.FullName.Replace(skinDirectory.FullName, string.Empty) + Path.DirectorySeparatorChar + theFile.Name,
-                                    gameFileName, true);
+                                File.Copy(theFile.FullName, gameFileName, true);
                             }
                         }
                     }
@@ -380,33 +239,6 @@ namespace SkinManager.Services
         /// Send a OperationErrorMessage if an error occurs.
         /// </summary>
         /// <param name="fileLocation">Game executable location.</param>
-        public static void StartGame(string fileLocation)
-        {
-            if (File.Exists(fileLocation))
-            {
-                ProcessStartInfo psInfo = new()
-                {
-                    FileName = Path.Combine(fileLocation),
-                    Verb = "runas",
-                    UseShellExecute = true
-                };
-
-                try
-                {
-                    Process.Start(psInfo);
-                }
-                catch (Exception ex)
-                {
-                    _theMessenger.Send(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-                }
-            }
-        }
-
-        /// <summary>
-        /// Starts the game.
-        /// Send a OperationErrorMessage if an error occurs.
-        /// </summary>
-        /// <param name="fileLocation">Game executable location.</param>
         public static async Task StartGameAsync(string fileLocation)
         {
             if (await FileExistsAsync(fileLocation))
@@ -429,7 +261,7 @@ namespace SkinManager.Services
             }
         }
 
-        public static async Task<bool> ExtractSkin(string archivePath, string destinationLocation)
+        public static async Task<bool> ExtractSkinAsync(string archivePath, string destinationLocation)
         {
             
             if (await FileExistsAsync(archivePath))
@@ -457,15 +289,6 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="directoryPath"></param>
         /// <returns>if the directory is empty.</returns>
-        private static bool IsEmptyDirectory(string directoryPath)
-        {
-            return !Directory.EnumerateFileSystemEntries(directoryPath).Any();
-        }
-        /// <summary>
-        /// Checks if a directory is empty.
-        /// </summary>
-        /// <param name="directoryPath"></param>
-        /// <returns>if the directory is empty.</returns>
         private static async Task<bool> IsEmptyDirectoryAsync(string directoryPath)
         {
             return await Task.Run(() => !Directory.EnumerateFileSystemEntries(directoryPath).Any());
@@ -476,7 +299,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="gameInfoFileName">File to load.</param>
         /// <returns>Collection of GameInfo.</returns>
-        public static async Task<GameInfo> LoadGameInfo(string gameInfoFileName)
+        public static async Task<GameInfo> LoadGameInfoAsync(string gameInfoFileName)
         {
             try
             {
@@ -501,13 +324,13 @@ namespace SkinManager.Services
             }
         }
         
-        public static async Task<IEnumerable<Skin>> LoadWebSkins(string webSkinsFileName)
+        public static async Task<IEnumerable<Skin>> LoadCachedWebSkinsAsync(string cachedWebSkinsFileName)
         {
             try
             {
-                if (File.Exists(webSkinsFileName))
+                if (File.Exists(cachedWebSkinsFileName))
                 {
-                    await using Stream fileStream = File.OpenRead(webSkinsFileName);
+                    await using Stream fileStream = File.OpenRead(cachedWebSkinsFileName);
                     return await JsonSerializer.DeserializeAsync<IEnumerable<Skin>>(fileStream) switch
                     {
                         { } webSkins => [..webSkins],
@@ -531,7 +354,7 @@ namespace SkinManager.Services
         /// </summary>
         /// <param name="gameInfo">Collection of GameInfo to save.</param>
         /// <param name="gameInfoFileName">File to save to.</param>
-        public static async Task SaveGameInfo(GameInfo gameInfo, string gameInfoFileName)
+        public static async Task SaveGameInfoAsync(GameInfo gameInfo, string gameInfoFileName)
         {
             try
             {
@@ -544,7 +367,7 @@ namespace SkinManager.Services
             }
         }
 
-        public static async Task SaveWebSkins(IEnumerable<Skin> webSkins, string webSkinsFileName)
+        public static async Task SaveWebSkinsAsync(IEnumerable<Skin> webSkins, string webSkinsFileName)
         {
             try
             {
@@ -557,7 +380,7 @@ namespace SkinManager.Services
             }
         }
 
-        public static async Task SaveScreenshot(string path, IEnumerable<string> screenshots)
+        public static async Task SaveScreenshotsAsync(string path, IEnumerable<string> screenshots)
         {
             try
             {
@@ -583,6 +406,18 @@ namespace SkinManager.Services
             catch (Exception ex)
             {
                 _theMessenger.Send(new OperationErrorMessage(ex.GetType().Name, ex.Message));
+            }
+        }
+
+        public static async Task<bool> FolderHasFilesAsync(string folderPath)
+        {
+            if (await DirectoryExistsAsync(folderPath))
+            {
+                return new DirectoryInfo(folderPath).EnumerateFiles(".", SearchOption.AllDirectories).Any();
+            }
+            else
+            {
+                return false;
             }
         }
     }

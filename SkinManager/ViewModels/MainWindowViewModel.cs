@@ -13,7 +13,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using SkinManager.Extensions;
@@ -40,8 +39,6 @@ namespace SkinManager.ViewModels
         public ObservableCollection<string> AvailableSkinNames { get; set; } = [];
         public ObservableCollection<string> OriginalSkinNames { get; set; } = [];
 
-        private ObservableCollection<Skin> AppliedSkins { get; set; } = [];
-
         public IEnumerable<string> WebSources
             => Enum.GetNames<SkinsSource>()
                 .Where(x => !string.Equals(x, SkinsSource.Local.ToString(), StringComparison.OrdinalIgnoreCase));
@@ -58,16 +55,12 @@ namespace SkinManager.ViewModels
         [ObservableProperty] private bool _isEphinea = true;
 
         [ObservableProperty] private SkinsSource _selectedSource;
-
-        private IEnumerable<string> SelectedSkinLocation =>
-            _skins.SingleOrDefault(x => x.Name == SelectedSkinName)?.Locations ?? [];
+        
+        private bool WebSkinSelected => _skins.First(x => x.Name == SelectedSkinName).IsWebSkin();
 
         public int SkinNameLength => AvailableSkinNames.Max(skinName => skinName.Length);
 
         [ObservableProperty] private string _appliedSkinName = string.Empty;
-
-        private string BackUpLocation =>
-            Path.Combine(SkinsLocation, SelectedSkinTypeName, "Originals", SelectedSkinSubType);
 
         public Bitmap? Screenshot1 { get; private set; }
         public Bitmap? Screenshot2 { get; private set; }
@@ -77,6 +70,7 @@ namespace SkinManager.ViewModels
         [NotifyCanExecuteChangedFor(nameof(CreateBackupCommand))]
         [NotifyPropertyChangedFor(nameof(Screenshot1))]
         [NotifyPropertyChangedFor(nameof(Screenshot2))]
+        [NotifyPropertyChangedFor(nameof(WebSkinSelected))]
         private string _selectedSkinName = string.Empty;
 
         [NotifyPropertyChangedFor(nameof(AvailableSkinNames))] [ObservableProperty]
@@ -102,7 +96,6 @@ namespace SkinManager.ViewModels
         [NotifyCanExecuteChangedFor(nameof(CreateBackupCommand))]
         private bool _busy = false;
 
-        private bool _webSkinSelected = false;
 
         #endregion
 
@@ -235,16 +228,7 @@ namespace SkinManager.ViewModels
         {
             if (_skins.SingleOrDefault(x => x.Name == SelectedSkinName) is { } currentSkin)
             {
-                if (currentSkin.IsWebSkin())
-                {
-                    ApplySkinButtonText = "Download Skin";
-                    _webSkinSelected = true;
-                }
-                else
-                {
-                    ApplySkinButtonText = "Apply Skin";
-                    _webSkinSelected = false;
-                }
+                ApplySkinButtonText = currentSkin.IsWebSkin() ? "Download Skin" : "Apply Skin";
             }
 
             await SetScreenshots();
@@ -332,39 +316,34 @@ namespace SkinManager.ViewModels
         public bool CanBrowse => !Busy;
 
         public bool CanApply => !string.IsNullOrEmpty(SkinsLocation) && !string.IsNullOrEmpty(GameLocation) && !Busy;
-        public bool CanRestore => Directory.Exists(BackUpLocation) && !Busy;
+        public bool CanRestore => !Busy;
 
 
         [RelayCommand(CanExecute = nameof(CanApply))]
-        public async Task ApplySkin()
+        private async Task ApplySkin()
         {
             Busy = true;
 
-            if (!_webSkinSelected)
+            if (!WebSkinSelected)
             {
                 ProcessingText = "Applying skin. Please wait.";
-                await _skinsAccessService.ApplySkin(SelectedSkinName, IsEphinea);
-                AddAppliedSkin(SelectedSkinName);
+                if (await _skinsAccessService.ApplySkin(SelectedSkinName, IsEphinea))
+                {
+                    AddAppliedSkin(SelectedSkinName);
+                }
             }
             else
             {
                 ProcessingText = "Downloading skin. Please wait.";
                 Skin skinToDownload = _skins.Single(x => x.Name == SelectedSkinName);
-                string extractLocation = Path.Combine(SkinsLocation, skinToDownload.SkinType, skinToDownload.SubType);
 
-                (bool Downloaded, bool Extracted) downloadStatus =
-                    await _skinsAccessService.DownloadSkin(skinToDownload, 0, skinToDownload.Screenshots);
-
-                string message = string.Empty;
-                if (downloadStatus is { Downloaded: true, Extracted: false })
-                {
-                    message = $"Skin downloaded to {SkinsLocation}. " +
-                              $"{Environment.NewLine} Please put the skin in the appropriate area, switch back to local and click reload skins.";
-                }
-                else
-                {
-                    message = $"Skin downloaded to {SkinsLocation}. ";
-                }
+                string message =
+                    await _skinsAccessService.DownloadSkin(skinToDownload, 0, skinToDownload.Screenshots) switch
+                    {
+                        (true, false) => message = $"Skin downloaded to {SkinsLocation}. " +
+                                                   $"{Environment.NewLine} Please put the skin in the appropriate area and click to refresh skins.",
+                        _ => message = $"Skin downloaded to {SkinsLocation}. "
+                    };
 
                 _skins = [.._skinsAccessService.GetCurrentSkins()];
                 RefreshAvailableSkinNames();
@@ -381,7 +360,7 @@ namespace SkinManager.ViewModels
         }
 
         [RelayCommand(CanExecute = nameof(CanBrowse))]
-        public async Task BrowseExecutable()
+        private async Task BrowseExecutable()
         {
             Busy = true;
 
@@ -406,18 +385,18 @@ namespace SkinManager.ViewModels
         }
 
         [RelayCommand(CanExecute = nameof(CanBackup))]
-        public async Task CreateBackup()
+        private async Task CreateBackup()
         {
             Busy = true;
 
             ProcessingText = "Creating backup. Please wait.";
-            await FileAccessService.CreateBackUpAsync(SelectedSkinLocation.First(), BackUpLocation, GameLocation);
+            _ = await _skinsAccessService.CreateBackup(SelectedSkinName);
 
             Busy = false;
         }
 
         [RelayCommand(CanExecute = nameof(CanBrowse))]
-        public async Task BrowseFolder(object? parameter)
+        private async Task BrowseFolder(object? parameter)
         {
             Busy = true;
 
@@ -448,7 +427,7 @@ namespace SkinManager.ViewModels
         }
 
         [RelayCommand(CanExecute = nameof(CanCreateStructure))]
-        public async Task CreateStructureAsync()
+        private async Task CreateStructureAsync()
         {
             Busy = true;
 
@@ -474,7 +453,7 @@ namespace SkinManager.ViewModels
         }
 
         [RelayCommand(CanExecute = nameof(CanReloadSkins))]
-        public async Task RefreshWebSkins()
+        private async Task RefreshWebSkins()
         {
             Busy = true;
 
@@ -486,15 +465,15 @@ namespace SkinManager.ViewModels
         }
 
         [RelayCommand(CanExecute = nameof(CanRestore))]
-        public async Task Restore()
+        private async Task Restore()
         {
             Busy = true;
 
             ProcessingText = "Restoring from backup. Please wait.";
 
-            if (await FileAccessService.RestoreBackupAsync(BackUpLocation, GameLocation))
+            if (await _skinsAccessService.BackUpExists(SelectedSkinName))
             {
-                RemoveAppliedSkin(SelectedSkinName);
+                await _skinsAccessService.RestoreBackup(SelectedSkinName);
             }
 
             Busy = false;

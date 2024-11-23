@@ -19,7 +19,6 @@ public class SkinsAccessService(
     private GameInfo _psoGame = default!;
     private List<Skin> _gameSkins = [];
     private SkinsSource _skinsSource = SkinsSource.Ephinea;
-
     public void AddAppliedSkin(string appliedSkinName)
     {
         if (!_psoGame.AppliedSkins.Contains(appliedSkinName))
@@ -90,7 +89,7 @@ public class SkinsAccessService(
         foreach (var screenshot in screenshots)
         {
             string path = Path.Combine(_psoGame.SkinsLocation, skin.SkinType, skin.SubType, skin.Name,"Screenshots");
-            await FileAccessService.SaveScreenshot(path, screenshots);
+            await FileAccessService.SaveScreenshotsAsync(path, screenshots);
         }
     }
 
@@ -180,7 +179,52 @@ public class SkinsAccessService(
     {
         string skinDirectory = _gameSkins.First(x => x.Name == skinName).Locations[0];
         string gameDirectory = _psoGame.GameLocation;
-        return await FileAccessService.ApplySkin(skinDirectory, gameDirectory);
+        return await FileAccessService.ApplySkinAsync(skinDirectory, gameDirectory);
+    }
+
+    public async Task<bool> CreateBackup(string skinName)
+    {
+        Skin selectedSkin = _gameSkins.First(x => x.Name == skinName);
+        string backupLocation = GetBackupLocation(skinName);
+        return await FileAccessService.CreateBackUpAsync(selectedSkin.Locations[0], backupLocation,_psoGame.GameLocation);
+    }
+
+    public async Task<bool> RestoreBackup(string skinName)
+    {
+        Skin selectedSkin = _gameSkins.First(x => x.Name == skinName);
+
+        if (await FileAccessService.RestoreBackupAsync(selectedSkin.Locations[0], _psoGame.GameLocation))
+        {
+            _psoGame.AppliedSkins.Remove(skinName);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    private string GetBackupLocation(string selectedSkinName)
+    {
+        if(_gameSkins.FirstOrDefault(x => x.Name == selectedSkinName) is { } selectedSkin)
+        {
+            return Path.Combine(_psoGame.SkinsLocation, selectedSkin.SkinType, "Originals", selectedSkin.SubType);
+        }
+        else
+        {
+            return string.Empty;
+        }
+    }
+
+    public async Task<bool> BackUpExists(string selectedSkinName)
+    {
+        if(_gameSkins.FirstOrDefault(x => x.Name == selectedSkinName) is { } selectedSkin)
+        {
+            string backupPath =  Path.Combine(_psoGame.SkinsLocation, selectedSkin.SkinType, "Originals", selectedSkin.SubType);
+            return await FileAccessService.FolderHasFilesAsync(backupPath);
+        }
+        
+        return false;
     }
 
     public IEnumerable<SkinType> GetSkinTypes()
@@ -232,14 +276,14 @@ public class SkinsAccessService(
     {
         Skin currentSkin = _gameSkins.First(x => x.Name == skinName);
         string destination = Path.Combine(_psoGame.SkinsLocation, currentSkin.SkinType, currentSkin.SubType, currentSkin.Name);
-        return await FileAccessService.ExtractSkin(archivePath, destination);
+        return await FileAccessService.ExtractSkinAsync(archivePath, destination);
     }
 
     public async Task LoadInformation()
     {
-        _psoGame = await FileAccessService.LoadGameInfo(locations.GameInfoFile);
+        _psoGame = await FileAccessService.LoadGameInfoAsync(locations.GameInfoFile);
 
-        UpdateSkins(await FileAccessService.LoadWebSkins(locations.WebSkinsFile));
+        UpdateSkins(await FileAccessService.LoadCachedWebSkinsAsync(locations.WebSkinsFile));
     }
 
     public void RemoveAppliedSkin(string removedSkinName)
@@ -252,8 +296,8 @@ public class SkinsAccessService(
     {
         List<Task> tasks =
         [
-            FileAccessService.SaveWebSkins(_gameSkins, locations.WebSkinsFile),
-            FileAccessService.SaveGameInfo(_psoGame, locations.GameInfoFile)
+            FileAccessService.SaveWebSkinsAsync(_gameSkins, locations.WebSkinsFile),
+            FileAccessService.SaveGameInfoAsync(_psoGame, locations.GameInfoFile)
         ];
         await Task.WhenAll(tasks);
     }
