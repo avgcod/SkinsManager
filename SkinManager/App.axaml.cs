@@ -86,6 +86,9 @@ namespace SkinManager
 
             services.AddScoped<ErrorMessageBoxView>();
             services.AddScoped<ErrorMessageBoxViewModel>();
+
+            services.AddScoped<ConfirmationView>();
+            services.AddScoped<ConfirmationWindowViewModel>();
         });
     }
 }

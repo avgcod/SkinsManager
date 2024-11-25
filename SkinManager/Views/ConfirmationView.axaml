@@ -1,0 +1,34 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="SkinManager.Views.ConfirmationView"
+        xmlns:vm="using:SkinManager.ViewModels"
+        x:DataType="vm:ConfirmationWindowViewModel"
+        Title="ConfirmationWindow">
+    <StackPanel
+        Margin="5"
+        Orientation="Vertical"
+        Spacing="10">
+
+        <TextBlock HorizontalAlignment="Center" Text="{Binding MessageText}" />
+
+        <Button
+            Width="50"
+            Margin="0,0,5,0"
+            HorizontalAlignment="Center"
+            HorizontalContentAlignment="Center"
+            Command="{Binding OKCommand}"
+            Content="OK" />
+        
+        <Button
+            Width="50"
+            Margin="0,0,5,0"
+            HorizontalAlignment="Center"
+            HorizontalContentAlignment="Center"
+            Command="{Binding CancelCommand}"
+            Content="Cancel" />
+
+    </StackPanel>
+</Window>

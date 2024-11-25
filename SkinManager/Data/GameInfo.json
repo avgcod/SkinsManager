@@ -1,8 +1,8 @@
 {
   "GameName": "Phantasy Star Online BB",
-  "SkinsLocation": "/home/sage/ArcadiaShare/Games/Sega/Texture Packs/Phantasy Star Online BB",
-  "GameLocation": "/home/sage/Games/phantasy-star-online-blue-burst/drive_c/EphineaPSO",
-  "GameExecutable": "/home/sage/Games/phantasy-star-online-blue-burst/drive_c/EphineaPSO/online.exe",
+  "SkinsLocation": "",
+  "GameLocation": "",
+  "GameExecutable": "",
   "AppliedSkins": [],
   "SkinTypes": [
     {

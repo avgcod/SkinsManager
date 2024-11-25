@@ -20,7 +20,7 @@ using SkinManager.Extensions;
 namespace SkinManager.ViewModels
 {
     public partial class MainWindowViewModel : ViewModelBase, IRecipient<OperationErrorMessage>
-        , IRecipient<DirectoryNotEmptyMessage>, IRecipient<FatalErrorMessage>
+        , IRecipient<DirectoryNotEmptyMessage>, IRecipient<FatalErrorMessage>, IRecipient<ConfirmationResponse>
     {
         #region Variables
 
@@ -28,6 +28,7 @@ namespace SkinManager.ViewModels
         private readonly Window _currentWindow;
         private readonly IServiceScopeFactory _scopeFactory;
         private bool _cleanShutdown = true;
+        private bool _applyNoBackup = false;
 
         #endregion
 
@@ -37,7 +38,6 @@ namespace SkinManager.ViewModels
         public ObservableCollection<string> SkinTypeNames { get; set; } = [];
         public ObservableCollection<string> SkinSubTypes { get; set; } = [];
         public ObservableCollection<string> AvailableSkinNames { get; set; } = [];
-        public ObservableCollection<string> OriginalSkinNames { get; set; } = [];
 
         public IEnumerable<string> WebSources
             => Enum.GetNames<SkinsSource>()
@@ -47,15 +47,15 @@ namespace SkinManager.ViewModels
 
         #region Properties
 
-        [ObservableProperty] private string _applySkinButtonText = "Apply Skin";
         [ObservableProperty] private string _processingText = "Processing. Please wait.";
         [ObservableProperty] private string _skinsLocation = string.Empty;
         [ObservableProperty] private string _gameExecutableLocation = string.Empty;
         [ObservableProperty] private string _gameLocation = string.Empty;
         [ObservableProperty] private bool _isEphinea = true;
+        [ObservableProperty] private bool _includeWeb = false;
 
         [ObservableProperty] private SkinsSource _selectedSource;
-        
+
         private bool WebSkinSelected => _skins.First(x => x.Name == SelectedSkinName).IsWebSkin();
 
         public int SkinNameLength => AvailableSkinNames.Max(skinName => skinName.Length);
@@ -67,35 +67,30 @@ namespace SkinManager.ViewModels
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(ApplySkinCommand))]
-        [NotifyCanExecuteChangedFor(nameof(CreateBackupCommand))]
         [NotifyPropertyChangedFor(nameof(Screenshot1))]
         [NotifyPropertyChangedFor(nameof(Screenshot2))]
         [NotifyPropertyChangedFor(nameof(WebSkinSelected))]
         private string _selectedSkinName = string.Empty;
 
-        [NotifyPropertyChangedFor(nameof(AvailableSkinNames))] [ObservableProperty]
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(AvailableSkinNames))]
         private string _selectedSkinTypeName = string.Empty;
 
-        [NotifyPropertyChangedFor(nameof(AvailableSkinNames))]
+        
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(AvailableSkinNames))]
         [NotifyCanExecuteChangedFor(nameof(RestoreCommand))]
         private string _selectedSkinSubType = string.Empty;
 
         [ObservableProperty]
-        [NotifyCanExecuteChangedFor(nameof(CreateStructureCommand))]
-        [NotifyCanExecuteChangedFor(nameof(CreateBackupCommand))]
         private bool _structureCreated = false;
 
         [ObservableProperty]
-        [NotifyCanExecuteChangedFor(nameof(RefreshLocalSkinsCommand))]
-        [NotifyCanExecuteChangedFor(nameof(RefreshWebSkinsCommand))]
-        [NotifyCanExecuteChangedFor(nameof(CreateStructureCommand))]
+        [NotifyCanExecuteChangedFor(nameof(RefreshSkinsCommand))]
         [NotifyCanExecuteChangedFor(nameof(StartGameCommand))]
         [NotifyCanExecuteChangedFor(nameof(BrowseFolderCommand))]
         [NotifyCanExecuteChangedFor(nameof(BrowseExecutableCommand))]
-        [NotifyCanExecuteChangedFor(nameof(CreateBackupCommand))]
         private bool _busy = false;
-
 
         #endregion
 
@@ -119,8 +114,7 @@ namespace SkinManager.ViewModels
         {
             await LoadInformation();
         }
-
-        public async void OnWindowClosing(object? sender, CancelEventArgs e)
+        private async void OnWindowClosing(object? sender, CancelEventArgs e)
         {
             Messenger.UnregisterAll(this);
             _currentWindow.Closing -= OnWindowClosing;
@@ -131,40 +125,44 @@ namespace SkinManager.ViewModels
                 await SaveInformation();
             }
         }
-
         private async Task LoadInformation()
         {
             await _skinsAccessService.LoadInformation();
 
             LoadLocations();
 
-            await RefreshLocalSkinsAsync();
+            StructureCreated = _skinsAccessService.FolderStructureIsCreated();
 
-            foreach (string currentSkinType in _skinsAccessService.GetSkinTypes().Select(skinType => skinType.Name)
-                         .Order())
+            if (!StructureCreated)
             {
-                SkinTypeNames.Add(currentSkinType);
+                await CreateStructureAsync();
             }
+
+            await RefreshSkinsAsync();
+
+            SkinTypeNames =
+            [
+                .._skinsAccessService.GetSkinTypes().Select(skinType => skinType.Name)
+                    .Order()
+            ];
+
+            OnPropertyChanged(nameof(SkinTypeNames));
 
             if (SkinTypeNames.Count > 0)
             {
                 SelectedSkinTypeName = SkinTypeNames.First();
             }
         }
-
         private void LoadLocations()
         {
             GameLocation = _skinsAccessService.GetGameLocation();
             SkinsLocation = _skinsAccessService.GetSkinsLocation();
             GameExecutableLocation = _skinsAccessService.GetGameExecutableLocation();
         }
-
-
         private async Task SaveInformation()
         {
             await _skinsAccessService.SaveInformation();
         }
-
         private async void SkinManagerViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(SelectedSource))
@@ -184,7 +182,6 @@ namespace SkinManager.ViewModels
                 await HandleSkinNameChanged();
             }
         }
-
         private async Task SetScreenshots()
         {
             Screenshot1 = null;
@@ -223,26 +220,20 @@ namespace SkinManager.ViewModels
             OnPropertyChanged(nameof(Screenshot1));
             OnPropertyChanged(nameof(Screenshot2));
         }
-
         private async Task HandleSkinNameChanged()
         {
-            if (_skins.SingleOrDefault(x => x.Name == SelectedSkinName) is { } currentSkin)
-            {
-                ApplySkinButtonText = currentSkin.IsWebSkin() ? "Download Skin" : "Apply Skin";
-            }
-
             await SetScreenshots();
         }
-
         private void UpdateAvailableSkinSubTypeNames()
         {
-            SkinSubTypes.Clear();
+            SkinSubTypes =
+            [
+                .._skins.Where(x => x.SkinType == SelectedSkinTypeName)
+                    .Select(x => x.SubType)
+                    .Distinct().Order()
+            ];
 
-            foreach (string currentSubType in _skins.Where(x => x.SkinType == SelectedSkinTypeName)
-                         .Select(x => x.SubType).Distinct().Order())
-            {
-                SkinSubTypes.Add(currentSubType);
-            }
+            OnPropertyChanged(nameof(SkinSubTypes));
 
             if (SkinSubTypes.Any())
             {
@@ -250,7 +241,6 @@ namespace SkinManager.ViewModels
                 RefreshAvailableSkinNames();
             }
         }
-
         private void HandleSkinSubTypeChanged()
         {
             if (string.IsNullOrEmpty(SelectedSkinSubType))
@@ -262,59 +252,40 @@ namespace SkinManager.ViewModels
 
             AppliedSkinName = GetAppliedSkinNameFromLocation();
         }
-
         private void RefreshAvailableSkinNames()
         {
-            AvailableSkinNames.Clear();
+            AvailableSkinNames =
+            [
+                .._skins
+                    .Where(x => x.SkinType == SelectedSkinTypeName && x.SubType == SelectedSkinSubType)
+                    .Select(x => x.Name)
+            ];
 
-            foreach (string currentSkinName in _skins
-                         .Where(x => x.SkinType == SelectedSkinTypeName && x.SubType == SelectedSkinSubType)
-                         .Select(x => x.Name))
-            {
-                AvailableSkinNames.Add(currentSkinName);
-            }
+            OnPropertyChanged(nameof(AvailableSkinNames));
         }
-
-        private async Task RefreshLocalSkinsAsync()
+        private async Task RefreshSkinsAsync()
         {
-            _skins = [..(await _skinsAccessService.RefreshLocalSkinsAsync()).OrderBy(x => x.Name)];
-
-            StructureCreated = _skins.Count != 0;
-
-            OriginalSkinNames = [.._skinsAccessService.GetOriginalSkinNames()];
+            _skins = [..await _skinsAccessService.RefreshSkins(IncludeWeb)];
 
             RefreshAvailableSkinNames();
         }
-
-        private async Task RefreshWebSkinsAsync()
+        private async Task CreateStructureAsync()
         {
-            _skins = [..await _skinsAccessService.RefreshWebSkinsAsync()];
+            Busy = true;
 
-            RefreshAvailableSkinNames();
-        }
+            ProcessingText = "Creating folder structure. Please wait.";
+            _ = await _skinsAccessService.CreateStructureAsync();
 
-        private void AddAppliedSkin(string appliedSkinName)
-        {
-            _skinsAccessService.AddAppliedSkin(appliedSkinName);
-        }
+            StructureCreated = true;
 
-        private void RemoveAppliedSkin(string removedSkinName)
-        {
-            _skinsAccessService.RemoveAppliedSkin(removedSkinName);
+            Busy = false;
         }
 
         #region Commands
-
         public bool CanStartGame => !string.IsNullOrEmpty(GameExecutableLocation) && !Busy;
         public bool CanReloadSkins => !string.IsNullOrEmpty(SkinsLocation) && !Busy;
         public bool CanCreateStructure => !string.IsNullOrEmpty(SkinsLocation) && !StructureCreated && !Busy;
-
-        public bool CanBackup => StructureCreated && !string.IsNullOrEmpty(SkinsLocation)
-                                                  && !string.IsNullOrEmpty(GameLocation)
-                                                  && !string.IsNullOrEmpty(SelectedSkinName) && !Busy;
-
         public bool CanBrowse => !Busy;
-
         public bool CanApply => !string.IsNullOrEmpty(SkinsLocation) && !string.IsNullOrEmpty(GameLocation) && !Busy;
         public bool CanRestore => !Busy;
 
@@ -324,41 +295,47 @@ namespace SkinManager.ViewModels
         {
             Busy = true;
 
-            if (!WebSkinSelected)
+            if (WebSkinSelected)
             {
-                ProcessingText = "Applying skin. Please wait.";
-                if (await _skinsAccessService.ApplySkin(SelectedSkinName, IsEphinea))
+                ProcessingText = "Downloading and applying skin. Please wait.";
+                string archivePath = await _skinsAccessService.DownloadSkin(SelectedSkinName, 0);
+            
+                if (await _skinsAccessService.ExtractSkin(SelectedSkinName, archivePath))
                 {
-                    AddAppliedSkin(SelectedSkinName);
+                    _skins = [.._skinsAccessService.GetSkins()];
+                    RefreshAvailableSkinNames();
+                }
+            
+                if (Screenshot1 is not null)
+                {
+                    await _skinsAccessService.SaveScreenshots(SelectedSkinName);
                 }
             }
             else
             {
-                ProcessingText = "Downloading skin. Please wait.";
-                Skin skinToDownload = _skins.Single(x => x.Name == SelectedSkinName);
+                ProcessingText = "Applying skin. Please wait.";
+            }
 
-                string message =
-                    await _skinsAccessService.DownloadSkin(skinToDownload, 0, skinToDownload.Screenshots) switch
+            if (!await _skinsAccessService.CreateBackup(SelectedSkinName))
+            {
+                await ShowConfirmationWindow(
+                    $"Failed to create backup.{Environment.NewLine}Do you still want to apply the skin?");
+
+                if (_applyNoBackup)
+                {
+                    if (await _skinsAccessService.ApplySkin(SelectedSkinName, IsEphinea))
                     {
-                        (true, false) => message = $"Skin downloaded to {SkinsLocation}. " +
-                                                   $"{Environment.NewLine} Please put the skin in the appropriate area and click to refresh skins.",
-                        _ => message = $"Skin downloaded to {SkinsLocation}. "
-                    };
-
-                _skins = [.._skinsAccessService.GetCurrentSkins()];
-                RefreshAvailableSkinNames();
-                
-
-                using IServiceScope serviceScope = _scopeFactory.CreateScope();
-                MessageBoxView mbView = serviceScope.ServiceProvider.GetRequiredService<MessageBoxView>();
-                mbView.DataContext = serviceScope.ServiceProvider.GetRequiredService<MessageBoxViewModel>();
-                Messenger.Send(new MessageBoxMessage(message));
-                await mbView.ShowDialog(_currentWindow);
+                        await ShowMessageBox($"Skin {SelectedSkinName} has been applied successfully.");
+                    }
+                    else
+                    {
+                        await ShowMessageBox($"Unable to apply skin {SelectedSkinName}");
+                    }
+                }
             }
 
             Busy = false;
         }
-
         [RelayCommand(CanExecute = nameof(CanBrowse))]
         private async Task BrowseExecutable()
         {
@@ -383,18 +360,6 @@ namespace SkinManager.ViewModels
 
             Busy = false;
         }
-
-        [RelayCommand(CanExecute = nameof(CanBackup))]
-        private async Task CreateBackup()
-        {
-            Busy = true;
-
-            ProcessingText = "Creating backup. Please wait.";
-            _ = await _skinsAccessService.CreateBackup(SelectedSkinName);
-
-            Busy = false;
-        }
-
         [RelayCommand(CanExecute = nameof(CanBrowse))]
         private async Task BrowseFolder(object? parameter)
         {
@@ -425,45 +390,17 @@ namespace SkinManager.ViewModels
 
             Busy = false;
         }
-
-        [RelayCommand(CanExecute = nameof(CanCreateStructure))]
-        private async Task CreateStructureAsync()
-        {
-            Busy = true;
-
-            ProcessingText = "Creating folder structure. Please wait.";
-            //await FileAccessService.CreateStructureAsync(_skins.Select(x => x.SkinType).DistinctBy(x => x.Name), SkinsLocation);
-            await FileAccessService.CreateStructureAsync(_skinsAccessService.GetSkinTypes(), SkinsLocation);
-
-            StructureCreated = true;
-
-            Busy = false;
-        }
-
         [RelayCommand(CanExecute = nameof(CanReloadSkins))]
-        public async Task RefreshLocalSkins()
+        private async Task RefreshSkins()
         {
             Busy = true;
 
-            ProcessingText = "Refreshing local skins. Please wait.";
+            ProcessingText = "Refreshing skins. Please wait.";
 
-            await RefreshLocalSkinsAsync();
-
-            Busy = false;
-        }
-
-        [RelayCommand(CanExecute = nameof(CanReloadSkins))]
-        private async Task RefreshWebSkins()
-        {
-            Busy = true;
-
-            ProcessingText = "Refreshing web skins. Please wait.";
-
-            await RefreshWebSkinsAsync();
+            await RefreshSkinsAsync();
 
             Busy = false;
         }
-
         [RelayCommand(CanExecute = nameof(CanRestore))]
         private async Task Restore()
         {
@@ -478,9 +415,8 @@ namespace SkinManager.ViewModels
 
             Busy = false;
         }
-
         [RelayCommand(CanExecute = nameof(CanStartGame))]
-        public async Task StartGameAsync()
+        private async Task StartGameAsync()
         {
             Busy = true;
 
@@ -489,65 +425,63 @@ namespace SkinManager.ViewModels
 
             Busy = false;
         }
-
         #endregion
 
         #region Message Handling
-
         public async void Receive(OperationErrorMessage message)
         {
-            await HandleOperationErrorMessageAsync(message);
+            await ShowErrorMessageBox(message.ErrorType, message.ErrorText);
         }
-
         public async void Receive(DirectoryNotEmptyMessage message)
         {
-            await HandleDirectoryNotEmptyMessageAsync(message);
+            string directory = string.Concat(message.DirectoryPath, " is not empty.", Environment.NewLine,
+                               "Please select an empty directory.");
+            
+            await ShowMessageBox(directory);
         }
-
-        private async Task HandleDirectoryNotEmptyMessageAsync(DirectoryNotEmptyMessage message)
-        {
-            using IServiceScope serviceScope = _scopeFactory.CreateScope();
-            MessageBoxView mboxView = serviceScope.ServiceProvider.GetRequiredService<MessageBoxView>();
-            mboxView.DataContext = serviceScope.ServiceProvider.GetRequiredService<MessageBoxViewModel>();
-            Messenger.Send<MessageBoxMessage>(new(message.DirectoryPath + " is not empty." + Environment.NewLine +
-                                                  "Please select an empty directory."));
-            await mboxView.ShowDialog(_currentWindow);
-        }
-
-        private async Task HandleOperationErrorMessageAsync(OperationErrorMessage message)
-        {
-            using IServiceScope serviceScope = _scopeFactory.CreateScope();
-            ErrorMessageBoxView emboxView = serviceScope.ServiceProvider.GetRequiredService<ErrorMessageBoxView>();
-            emboxView.DataContext = serviceScope.ServiceProvider.GetRequiredService<ErrorMessageBoxViewModel>();
-            Messenger.Send<ErrorMessage>(new(message.ErrorType, message.ErrorText));
-            await emboxView.ShowDialog(_currentWindow);
-        }
-
         public async void Receive(FatalErrorMessage message)
         {
-            using IServiceScope serviceScope = _scopeFactory.CreateScope();
-            ErrorMessageBoxView emboxView = serviceScope.ServiceProvider.GetRequiredService<ErrorMessageBoxView>();
-            emboxView.DataContext = serviceScope.ServiceProvider.GetRequiredService<ErrorMessageBoxViewModel>();
-            Messenger.Send<ErrorMessage>(new(message.ErrorType, message.ErrorText));
-            await emboxView.ShowDialog(_currentWindow);
+            await ShowErrorMessageBox(message.ErrorType, message.ErrorText);
             _cleanShutdown = false;
             _currentWindow.Close();
         }
-
+        public void Receive(ConfirmationResponse message)
+        {
+            _applyNoBackup = message.IsOK;
+        }
         #endregion
 
-        /// <summary>
-        /// Gets the name of the applied skin from the skin location.
-        /// </summary>
-        /// <returns>name of the applied skin or none if none are found.</returns>
         private string GetAppliedSkinNameFromLocation()
         {
             return _skinsAccessService.GetAppliedSkinNameFromLocation(SelectedSkinTypeName, SelectedSkinSubType);
         }
-
         private void SetSkinAccessService()
         {
             _skinsAccessService.SetSkinsSource(SelectedSource);
+        }
+        private async Task ShowConfirmationWindow(string message)
+        {
+            using IServiceScope serviceScope = _scopeFactory.CreateScope();
+            ConfirmationView confView = serviceScope.ServiceProvider.GetRequiredService<ConfirmationView>();
+            confView.DataContext = serviceScope.ServiceProvider.GetRequiredService<ConfirmationWindowViewModel>();
+            Messenger.Send<ConfirmationViewMessage>(new(message));
+            await confView.ShowDialog(_currentWindow);
+        }
+        private async Task ShowMessageBox(string message)
+        {
+            using IServiceScope serviceScope = _scopeFactory.CreateScope();
+            MessageBoxView mbView = serviceScope.ServiceProvider.GetRequiredService<MessageBoxView>();
+            mbView.DataContext = serviceScope.ServiceProvider.GetRequiredService<MessageBoxViewModel>();
+            Messenger.Send(new MessageBoxMessage(message));
+            await mbView.ShowDialog(_currentWindow);
+        }
+        private async Task ShowErrorMessageBox(string errorType, string errorText)
+        {
+            using IServiceScope serviceScope = _scopeFactory.CreateScope();
+            ErrorMessageBoxView emboxView = serviceScope.ServiceProvider.GetRequiredService<ErrorMessageBoxView>();
+            emboxView.DataContext = serviceScope.ServiceProvider.GetRequiredService<ErrorMessageBoxViewModel>();
+            Messenger.Send<ErrorMessage>(new(errorType, errorText));
+            await emboxView.ShowDialog(_currentWindow);
         }
     }
 }
