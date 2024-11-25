@@ -65,7 +65,7 @@ namespace SkinManager.Services
 
             return true;
         }
-        public static async Task<bool> CreateStructureAsync(IEnumerable<SkinType> skinTypes, string skinsFolderName)
+        public static async Task CreateStructureAsync(IEnumerable<SkinType> skinTypes, string skinsFolderName)
         {
             string path = string.Empty;
             try
@@ -88,11 +88,7 @@ namespace SkinManager.Services
             catch (Exception ex)
             {
                 _theMessenger.Send(new FatalErrorMessage(ex.GetType().Name, ex.Message));
-                return false;
             }
-
-
-            return true;
         }
         public static async Task<bool> CreateBackUpAsync(string skinDirectoryName, string backUpDirectoryName,
             string gameDirectoryName)

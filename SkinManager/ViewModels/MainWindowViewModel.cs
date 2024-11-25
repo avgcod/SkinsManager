@@ -53,12 +53,11 @@ namespace SkinManager.ViewModels
         [ObservableProperty] private string _gameLocation = string.Empty;
         [ObservableProperty] private bool _isEphinea = true;
         [ObservableProperty] private bool _includeWeb = false;
+        [ObservableProperty] private bool _showRestore = false;
 
         [ObservableProperty] private SkinsSource _selectedSource;
 
         private bool WebSkinSelected => _skins.First(x => x.Name == SelectedSkinName).IsWebSkin();
-
-        public int SkinNameLength => AvailableSkinNames.Max(skinName => skinName.Length);
 
         [ObservableProperty] private string _appliedSkinName = string.Empty;
 
@@ -101,8 +100,6 @@ namespace SkinManager.ViewModels
 
             _currentWindow = currentWindow;
             _skinsAccessService = skinsAccessService;
-
-            PropertyChanged += SkinManagerViewModel_PropertyChanged;
 
             _currentWindow.Closing += OnWindowClosing;
             _currentWindow.Loaded += WindowLoaded;
@@ -163,24 +160,45 @@ namespace SkinManager.ViewModels
         {
             await _skinsAccessService.SaveInformation();
         }
-        private async void SkinManagerViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+
+        partial void OnSelectedSourceChanged(SkinsSource value)
         {
-            if (e.PropertyName == nameof(SelectedSource))
+            _skinsAccessService.SetSkinsSource(SelectedSource);
+        }
+        partial void OnSelectedSkinTypeNameChanged(string value)
+        {
+            SkinSubTypes =
+            [
+                .._skins.Where(x => x.SkinType == SelectedSkinTypeName)
+                    .Select(x => x.SubType)
+                    .Distinct().Order()
+            ];
+
+            OnPropertyChanged(nameof(SkinSubTypes));
+
+            if (SkinSubTypes.Any())
             {
-                SetSkinAccessService();
+                SelectedSkinSubType = SkinSubTypes[0];
+                RefreshAvailableSkinNames();
             }
-            else if (e.PropertyName == nameof(SelectedSkinTypeName))
+        }
+        async partial void OnSelectedSkinSubTypeChanged(string value)
+        {
+            if (string.IsNullOrEmpty(SelectedSkinSubType))
             {
-                UpdateAvailableSkinSubTypeNames();
+                SelectedSkinSubType = string.Empty;
             }
-            else if (e.PropertyName == nameof(SelectedSkinSubType))
-            {
-                HandleSkinSubTypeChanged();
-            }
-            else if (e.PropertyName == nameof(SelectedSkinName))
-            {
-                await HandleSkinNameChanged();
-            }
+
+            ShowRestore = await _skinsAccessService.BackUpExists(SelectedSkinName);
+
+            RefreshAvailableSkinNames();
+
+            AppliedSkinName = GetAppliedSkinNameFromLocation();
+        }
+        async partial void OnSelectedSkinNameChanged(string value)
+        {
+            await SetScreenshots();
+
         }
         private async Task SetScreenshots()
         {
@@ -220,38 +238,6 @@ namespace SkinManager.ViewModels
             OnPropertyChanged(nameof(Screenshot1));
             OnPropertyChanged(nameof(Screenshot2));
         }
-        private async Task HandleSkinNameChanged()
-        {
-            await SetScreenshots();
-        }
-        private void UpdateAvailableSkinSubTypeNames()
-        {
-            SkinSubTypes =
-            [
-                .._skins.Where(x => x.SkinType == SelectedSkinTypeName)
-                    .Select(x => x.SubType)
-                    .Distinct().Order()
-            ];
-
-            OnPropertyChanged(nameof(SkinSubTypes));
-
-            if (SkinSubTypes.Any())
-            {
-                SelectedSkinSubType = SkinSubTypes[0];
-                RefreshAvailableSkinNames();
-            }
-        }
-        private void HandleSkinSubTypeChanged()
-        {
-            if (string.IsNullOrEmpty(SelectedSkinSubType))
-            {
-                SelectedSkinSubType = string.Empty;
-            }
-
-            RefreshAvailableSkinNames();
-
-            AppliedSkinName = GetAppliedSkinNameFromLocation();
-        }
         private void RefreshAvailableSkinNames()
         {
             AvailableSkinNames =
@@ -274,7 +260,7 @@ namespace SkinManager.ViewModels
             Busy = true;
 
             ProcessingText = "Creating folder structure. Please wait.";
-            _ = await _skinsAccessService.CreateStructureAsync();
+            await _skinsAccessService.CreateStructureAsync();
 
             StructureCreated = true;
 
@@ -408,10 +394,7 @@ namespace SkinManager.ViewModels
 
             ProcessingText = "Restoring from backup. Please wait.";
 
-            if (await _skinsAccessService.BackUpExists(SelectedSkinName))
-            {
-                await _skinsAccessService.RestoreBackup(SelectedSkinName);
-            }
+            await _skinsAccessService.RestoreBackup(SelectedSkinName);
 
             Busy = false;
         }
@@ -454,10 +437,6 @@ namespace SkinManager.ViewModels
         private string GetAppliedSkinNameFromLocation()
         {
             return _skinsAccessService.GetAppliedSkinNameFromLocation(SelectedSkinTypeName, SelectedSkinSubType);
-        }
-        private void SetSkinAccessService()
-        {
-            _skinsAccessService.SetSkinsSource(SelectedSource);
         }
         private async Task ShowConfirmationWindow(string message)
         {

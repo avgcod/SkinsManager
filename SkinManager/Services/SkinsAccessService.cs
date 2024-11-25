@@ -285,8 +285,8 @@ public class SkinsAccessService(
         return _gameSkins;
     }
 
-    public async Task<bool> CreateStructureAsync()
+    public async Task CreateStructureAsync()
     {
-        return await FileAccessService.CreateStructureAsync(_psoGame.SkinTypes, _psoGame.SkinsLocation);
+        await FileAccessService.CreateStructureAsync(_psoGame.SkinTypes, _psoGame.SkinsLocation);
     }
 }
