@@ -62,7 +62,7 @@ namespace SkinManager
             => configurationBuilder.AddUserSecrets(typeof(App).Assembly))
         .ConfigureServices((hostContext, services) =>
         {
-            services.AddSingleton(new Locations("GameInfo.json", "WebSkins.json", "AppliedSkins.json"));
+            services.AddSingleton(new Locations("GameInfo.json", "CachedSkins.json", "AppliedSkins.json"));
 
             services.AddSingleton(new HttpClient());
 

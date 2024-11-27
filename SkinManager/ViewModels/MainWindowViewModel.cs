@@ -59,7 +59,9 @@ namespace SkinManager.ViewModels
 
         private bool WebSkinSelected => _skins.First(x => x.Name == SelectedSkinName).IsWebSkin();
 
-        [ObservableProperty] private string _appliedSkinName = string.Empty;
+        [ObservableProperty]
+        [NotifyCanExecuteChangedFor(nameof(RestoreCommand))]
+        private string _appliedSkinName = string.Empty;
 
         public Bitmap? Screenshot1 { get; private set; }
         public Bitmap? Screenshot2 { get; private set; }
@@ -138,13 +140,7 @@ namespace SkinManager.ViewModels
                 await RefreshSkinsAsync();                
             }
 
-            SkinTypeNames =
-                    [
-                    .._skinsAccessService.GetSkinTypes().Select(skinType => skinType.Name)
-                    .Order()
-                    ];
-
-            OnPropertyChanged(nameof(SkinTypeNames));
+            RefreshSkinTypeNames();
 
             if (SkinTypeNames.Count > 0)
             {
@@ -171,9 +167,7 @@ namespace SkinManager.ViewModels
         }
         partial void OnSelectedSkinTypeNameChanged(string value)
         {
-            SkinSubTypes = [.. _skinsAccessService.GetSkinSubTypes(SelectedSkinTypeName).Order()];
-
-            OnPropertyChanged(nameof(SkinSubTypes));
+            RefreshSkinSubTypeNames();
 
             if (SkinSubTypes.Any())
             {
@@ -251,16 +245,41 @@ namespace SkinManager.ViewModels
             OnPropertyChanged(nameof(Screenshot1));
             OnPropertyChanged(nameof(Screenshot2));
         }
+
+        private void RefreshSkinTypeNames()
+        {
+            SkinTypeNames.Clear();
+
+            IEnumerable<string> newSkinTypeNames = _skinsAccessService.GetSkinTypes().Select(skinType => skinType.Name)
+                .Order();
+
+            foreach (string newSkinTypeName in newSkinTypeNames)
+            {
+                SkinTypeNames.Add(newSkinTypeName);
+            }
+        }
+
+        private void RefreshSkinSubTypeNames()
+        {
+            SkinSubTypes.Clear();
+
+            IEnumerable<string> newSkinSubTypeNames = _skinsAccessService.GetSkinSubTypes(SelectedSkinTypeName).Order();
+
+            foreach (string newSkinSubTypeName in newSkinSubTypeNames)
+            {
+                SkinSubTypes.Add(newSkinSubTypeName);
+            }
+        }
         private void RefreshAvailableSkinNames()
         {
-            AvailableSkinNames =
-            [
-                .._skins
-                    .Where(x => x.SkinType == SelectedSkinTypeName && x.SubType == SelectedSkinSubType)
-                    .Select(x => x.Name)
-            ];
-
-            OnPropertyChanged(nameof(AvailableSkinNames));
+            AvailableSkinNames.Clear();
+            IEnumerable<string> newVailableSkinNames = _skins
+                .Where(x => x.SkinType == SelectedSkinTypeName && x.SubType == SelectedSkinSubType)
+                .Select(x => x.Name);
+            foreach (string currentSkinName in newVailableSkinNames)
+            {
+                AvailableSkinNames.Add(currentSkinName);
+            }
         }
         private async Task RefreshSkinsAsync()
         {
@@ -285,7 +304,7 @@ namespace SkinManager.ViewModels
         public bool CanRefreshSkins => StructureCreated && !Busy;
         public bool CanBrowse => !Busy;
         public bool CanApply => !string.IsNullOrEmpty(SelectedSkinName) && !Busy;
-        public bool CanRestore => !Busy;
+        public bool CanRestore => !string.IsNullOrEmpty(AppliedSkinName) && !Busy;
 
 
         [RelayCommand(CanExecute = nameof(CanApply))]

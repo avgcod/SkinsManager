@@ -290,7 +290,7 @@ public class SkinsAccessService(
             }
         }
 
-        UpdateSkins(await FileAccessService.LoadJsonToIEnumerable<Skin>(locations.WebSkinsFile));
+        UpdateSkins(await FileAccessService.LoadJsonToIEnumerable<Skin>(locations.CachedSkinsFile));
         UpdateAppliedSkins(await FileAccessService.LoadJsonToIEnumerable<Skin>(locations.AppliedSkinsFile));
 
     }
@@ -307,7 +307,7 @@ public class SkinsAccessService(
     {
         List<Task> tasks =
         [
-            FileAccessService.SaveIEnumerableToJson(_gameSkins, locations.WebSkinsFile),
+            FileAccessService.SaveIEnumerableToJson(_gameSkins, locations.CachedSkinsFile),
             FileAccessService.SaveObjectToJson(_psoGame, locations.GameInfoFile),
             FileAccessService.SaveIEnumerableToJson(_appliedSkins, locations.AppliedSkinsFile)
         ];
