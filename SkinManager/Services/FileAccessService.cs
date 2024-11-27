@@ -254,40 +254,40 @@ namespace SkinManager.Services
                 return false;
             }
         }
-        public static async Task<GameInfo> LoadGameInfoAsync(string gameInfoFileName)
+        public static async Task<T?> LoadJsonToObject<T>(string fileName)
         {
             try
             {
-                if (File.Exists(gameInfoFileName))
+                if (File.Exists(fileName))
                 {
-                    await using Stream fileStream = File.OpenRead(gameInfoFileName);
-                    return await JsonSerializer.DeserializeAsync<GameInfo>(fileStream) switch
+                    await using Stream fileStream = File.OpenRead(fileName);
+                    return await JsonSerializer.DeserializeAsync<T>(fileStream) switch
                     {
-                        { } gameInfo => gameInfo,
-                        _ => throw new FileLoadException("The GameInfo file was found but was unable to be loaded.")
+                        { } objectInfo => objectInfo,
+                        _ => default(T)
                     };
                 }
                 else
                 {
-                    throw new FileLoadException("The GameInfo file was not found.");
+                    return default(T);
                 }
             }
             catch (Exception ex)
             {
                 _theMessenger.Send(new FatalErrorMessage(ex.GetType().Name, ex.Message));
-                throw new FileLoadException(ex.Message);
+                return default(T);
             }
         }
-        public static async Task<IEnumerable<Skin>> LoadCachedWebSkinsAsync(string cachedWebSkinsFileName)
+        public static async Task<IEnumerable<T>> LoadJsonToIEnumerable<T>(string fileName)
         {
             try
             {
-                if (File.Exists(cachedWebSkinsFileName))
+                if (File.Exists(fileName))
                 {
-                    await using Stream fileStream = File.OpenRead(cachedWebSkinsFileName);
-                    return await JsonSerializer.DeserializeAsync<IEnumerable<Skin>>(fileStream) switch
+                    await using Stream fileStream = File.OpenRead(fileName);
+                    return await JsonSerializer.DeserializeAsync<IEnumerable<T>>(fileStream) switch
                     {
-                        { } webSkins => [..webSkins],
+                        { } collection => [..collection],
                         _ => []
                     };
                 }
@@ -302,12 +302,12 @@ namespace SkinManager.Services
                 return [];
             }
         }
-        public static async Task SaveGameInfoAsync(GameInfo gameInfo, string gameInfoFileName)
+        public static async Task SaveObjectToJson<T>(T objectToSave, string fileName)
         {
             try
             {
-                await using Stream fileStream = File.Open(gameInfoFileName, FileMode.Create);
-                await JsonSerializer.SerializeAsync(fileStream, gameInfo,
+                await using Stream fileStream = File.Open(fileName, FileMode.Create);
+                await JsonSerializer.SerializeAsync(fileStream, objectToSave,
                     new JsonSerializerOptions { WriteIndented = true });
             }
             catch (Exception ex)
@@ -315,12 +315,12 @@ namespace SkinManager.Services
                 _theMessenger.Send(new OperationErrorMessage(ex.GetType().Name, ex.Message));
             }
         }
-        public static async Task SaveSkinsAsync(IEnumerable<Skin> webSkins, string skinsFileName)
+        public static async Task SaveIEnumerableToJson<T>(IEnumerable<T> collection, string fileName)
         {
             try
             {
-                await using Stream fileStream = File.Open(skinsFileName, FileMode.Create);
-                await JsonSerializer.SerializeAsync(fileStream, webSkins,
+                await using Stream fileStream = File.Open(fileName, FileMode.Create);
+                await JsonSerializer.SerializeAsync(fileStream, collection,
                     new JsonSerializerOptions { WriteIndented = true });
             }
             catch (Exception ex)
