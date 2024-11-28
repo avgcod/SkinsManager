@@ -24,7 +24,10 @@
         "VR Spaceship",
         "Towers"
       ],
-      "LastOnlineCheck": "0001-01-01"
+      "LastOnlineChecks": {
+        "Ephinea": "0001-01-01",
+        "UniversPS": "0001-01-01"
+      }
     },
     {
       "Name": "Enemy",
@@ -112,7 +115,10 @@
         "Satellite Lizard",
         "Yowie"
       ],
-      "LastOnlineCheck": "0001-01-01"
+      "LastOnlineChecks": {
+        "Ephinea": "0001-01-01",
+        "UniversPS": "0001-01-01"
+      }
     },
     {
       "Name": "Class",
@@ -129,7 +135,10 @@
         "Ramarl",
         "Racaseal"
       ],
-      "LastOnlineCheck": "0001-01-01"
+      "LastOnlineChecks": {
+        "Ephinea": "0001-01-01",
+        "UniversPS": "0001-01-01"
+      }
     },
     {
       "Name": "UI",
@@ -139,7 +148,10 @@
         "Audio",
         "Box"
       ],
-      "LastOnlineCheck": "0001-01-01"
+      "LastOnlineChecks": {
+        "Ephinea": "0001-01-01",
+        "UniversPS": "0001-01-01"
+      }
     },
     {
       "Name": "Equipment",
@@ -149,7 +161,10 @@
         "Weapon",
         "Mag"
       ],
-      "LastOnlineCheck": "0001-01-01"
+      "LastOnlineChecks": {
+        "Ephinea": "0001-01-01",
+        "UniversPS": "0001-01-01"
+      }
     },
     {
       "Name": "Effect",
@@ -159,7 +174,10 @@
         "Healing",
         "Other"
       ],
-      "LastOnlineCheck": "0001-01-01"
+      "LastOnlineChecks": {
+        "Ephinea": "0001-01-01",
+        "UniversPS": "0001-01-01"
+      }
     },
     {
       "Name": "NPC",
@@ -176,7 +194,10 @@
         "Guild",
         "Other"
       ],
-      "LastOnlineCheck": "0001-01-01"
+      "LastOnlineChecks": {
+        "Ephinea": "0001-01-01",
+        "UniversPS": "0001-01-01"
+      }
     },
     {
       "Name": "Object",
@@ -186,7 +207,10 @@
         "Blood",
         "Other"
       ],
-      "LastOnlineCheck": "0001-01-01"
+      "LastOnlineChecks": {
+        "Ephinea": "0001-01-01",
+        "UniversPS": "0001-01-01"
+      }
     },
     {
       "Name": "Other",
@@ -195,21 +219,30 @@
         "Ending",
         "Other"
       ],
-      "LastOnlineCheck": "0001-01-01"
+      "LastOnlineChecks": {
+        "Ephinea": "0001-01-01",
+        "UniversPS": "0001-01-01"
+      }
     },
     {
       "Name": "Audio",
       "SubTypes": [
         "Other"
       ],
-      "LastOnlineCheck": "0001-01-01"
+      "LastOnlineChecks": {
+        "Ephinea": "0001-01-01",
+        "UniversPS": "0001-01-01"
+      }
     },
     {
       "Name": "Unitxt",
       "SubTypes": [
         "Other"
       ],
-      "LastOnlineCheck": "0001-01-01"
+      "LastOnlineChecks": {
+        "Ephinea": "0001-01-01",
+        "UniversPS": "0001-01-01"
+      }
     }
   ]
 }

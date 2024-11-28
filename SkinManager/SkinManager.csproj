@@ -36,12 +36,7 @@
 
 
   <ItemGroup>
-    <Folder Include="Data\" />
-  </ItemGroup>
-
-
-  <ItemGroup>
-    <None Update="Data\GameInfo.json">
+    <None Update="GameInfo.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

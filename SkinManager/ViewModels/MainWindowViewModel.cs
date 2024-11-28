@@ -23,17 +23,14 @@ namespace SkinManager.ViewModels
         , IRecipient<DirectoryNotEmptyMessage>, IRecipient<FatalErrorMessage>, IRecipient<ConfirmationResponse>
     {
         #region Variables
-
         private readonly SkinsAccessService _skinsAccessService;
         private readonly Window _currentWindow;
         private readonly IServiceScopeFactory _scopeFactory;
         private bool _cleanShutdown = true;
         private bool _applyNoBackup = false;
-
         #endregion
 
         #region Collections
-
         private List<Skin> _skins = [];
         public ObservableCollection<string> SkinTypeNames { get; set; } = [];
         public ObservableCollection<string> SkinSubTypes { get; set; } = [];
@@ -42,11 +39,9 @@ namespace SkinManager.ViewModels
         public IEnumerable<string> WebSources
             => Enum.GetNames<SkinsSource>()
                 .Where(x => !string.Equals(x, SkinsSource.Local.ToString(), StringComparison.OrdinalIgnoreCase));
-
         #endregion
 
         #region Properties
-
         [ObservableProperty] private string _processingText = "Processing. Please wait.";
         [ObservableProperty] private string _skinsLocation = string.Empty;
         [ObservableProperty] private string _gameExecutableLocation = string.Empty;
@@ -77,7 +72,6 @@ namespace SkinManager.ViewModels
         [NotifyPropertyChangedFor(nameof(AvailableSkinNames))]
         private string _selectedSkinTypeName = string.Empty;
 
-
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(AvailableSkinNames))]
         [NotifyCanExecuteChangedFor(nameof(RestoreCommand))]
@@ -93,7 +87,6 @@ namespace SkinManager.ViewModels
         [NotifyCanExecuteChangedFor(nameof(BrowseFolderCommand))]
         [NotifyCanExecuteChangedFor(nameof(BrowseExecutableCommand))]
         private bool _busy = false;
-
         #endregion
 
         public MainWindowViewModel(IServiceScopeFactory scopeFactory, MainWindow currentWindow,
@@ -258,7 +251,6 @@ namespace SkinManager.ViewModels
                 SkinTypeNames.Add(newSkinTypeName);
             }
         }
-
         private void RefreshSkinSubTypeNames()
         {
             SkinSubTypes.Clear();
@@ -287,6 +279,7 @@ namespace SkinManager.ViewModels
 
             RefreshAvailableSkinNames();
         }
+        
         private async Task CreateStructureAsync()
         {
             Busy = true;
