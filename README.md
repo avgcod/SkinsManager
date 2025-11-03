@@ -1,17 +1,27 @@
-# SkinsManager
-This program helps manage video game skins.
+# Skins Manager
+## _Manage Phantasy Star Online Blue Burst skins._
 
-Instruction
-Add a new game by selectign the New option in the Game Combo Box.
-Choose the location for the skins using the Browse Button.
-Choose the location the game using the Browse Button.
-Choose the game executable file usign the Browse button.
-If you currently do not have any skins in the folder you can create the necessary structre using the Create Structure button.
-The folder structure for skins is completely customizeable. It simply expect the top folder to be the type, the sub folder to be the sub type and the sub folders in there to be the different skins.
-For example: Skins Location -> Area -> Forest -> Blue Forest.
-The above example would show up in the program as there being a skin type Area with a sub type Forest and an available skin Blue Forest.
-The folders can be renamed.
-The program expects the folder structre and files to match what is in the game location.
-For example if you rskins folder has a data folder with a forest.png in it, the program with try to put the forest.png file in the data folder in the game location folder.
-You must select a skin before you can click the Apply SKin, Back Up or Restore buttons.
-You have to have a back up made before you can use the Restore button.
+## Features
+
+- Can automatically grab skins from the web.
+- Automatically creates a back up before applying skins.
+- Displays screenshots of skins if available.
+
+## Instructions
+
+- Click the button next to the Skins Folder Text Box to select where your skins will be saved.
+- Click the button next to the game Folder text box to select where the game is installed.
+- Click the button next to the Game File text box to select the game executable file.
+- Click the Refresh button.
+- Select a Skin Type from the drop down.
+-- For example Area, Class, Equipment etc.
+- Select a Sub Type from the drop down.
+-- For example Forest, Caves, Mines etc.
+- Select a skin to apply form the available skins listed in the box.
+- Click Apply Skin.
+- Click Start Game to run the game.
+
+## Notes
+- When pressing Refresh for the first time the program will first create the necessary folder structure in the previously selected Skins Folder if it is not already created.
+- The program will automatically create a back up of the files that the skin will overwrite if they have not already been backed up.
+- The program will only allow pulling skins from each site once every 24 hours to minimize bandwidth usage.
