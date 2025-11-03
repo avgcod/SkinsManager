@@ -1,42 +1,31 @@
-﻿using CommunityToolkit.Mvvm.Messaging;
-using SkinManager.Models;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using LanguageExt;
+using SkinManager.Types;
 
 namespace SkinManager.Services;
 
-/// <summary>
-/// This class provides access to files on the local file system.
-/// </summary>
-public class LocalSkinsAccessService(IMessenger theMessenger)
-{
-    
-    public async Task<IEnumerable<Skin>> GetAvailableSkinsAsync(string skinsFolder, IEnumerable<SkinType> skinTypes)
+public static class LocalSkinsAccessService{
+    public static async Task<Fin<ImmutableList<LocalSkin>>> GetAvailableSkinsAsync(string skinsFolder)
     {
-        try
-        {
-            if (await DirectoryExistsAsync(skinsFolder))
-            {
-                return await GetSkins(skinsFolder);
-            }
-            else
-            {
-                return [];
-            }
+        try{
+            Fin<ImmutableList<LocalSkin>> skins = Fin<ImmutableList<LocalSkin>>.Fail("");
+            if((await Task.Run(() => Directory.Exists(skinsFolder))))
+             skins = await GetSkins(skinsFolder);
+            return skins;
         }
-        catch (Exception ex)
-        {
-            theMessenger.Send(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-            return [];
+        catch (Exception ex){
+            return Fin<ImmutableList<LocalSkin>>.Fail(ex);
         }
     }
 
-    private async Task<IEnumerable<Skin>> GetSkins(string skinsFolder)
+    private static async Task<ImmutableList<LocalSkin>> GetSkins(string skinsFolder)
     {
-        List<Skin> skins = [];
+        List<LocalSkin> skins = [];
         DirectoryInfo rootDirectory = new(skinsFolder);
 
         foreach (DirectoryInfo skinTypeDirectory in rootDirectory.GetDirectories())
@@ -48,62 +37,38 @@ public class LocalSkinsAccessService(IMessenger theMessenger)
                 {
                     string screenshotsFolder = Path.Combine(subTypeDirectory.FullName, "Screenshots");
                     
-                    skins.Add(await CreateTempSkin(skinDirectory, subTypeDirectory,
-                        screenshotsFolder, skinTypeDirectory.Name, subTypeDirectory.Name));
+                    skins.Add(await CreateTempSkin(skinDirectory, screenshotsFolder));
                 }
             }
         }
 
-        return skins;
+        return skins.ToImmutableList();
     }
 
-    private async Task<Skin> CreateTempSkin(DirectoryInfo skinDirectory, DirectoryInfo subTypeDirectory, string screenshotsFolder, string skinType, string subType)
+    private static async Task<LocalSkin> CreateTempSkin(DirectoryInfo skinDirectory, string screenshotsFolder)
     {
-        List<string> screenshots = [..await GetScreenShots(screenshotsFolder)];
-        
-        (string Name, string Description, string Author) skinInfo =
-            GetSkinNameAndDescription(skinDirectory.Name, subTypeDirectory.Name);
-
-        DateOnly creationDate = DateOnly.FromDateTime(skinDirectory.CreationTime);
-        DateOnly lastUpdatedDate = DateOnly.FromDateTime(skinDirectory.LastWriteTime);
-
-        return Skin.Create(skinType, subType, skinInfo.Name, [skinDirectory.FullName], skinInfo.Author,
-            skinInfo.Description, creationDate, lastUpdatedDate, screenshots, SkinsSource.Local);
+        string skinName = skinDirectory.Name;
+        string skinType = skinDirectory!.Parent!.Parent!.Name;
+        string skinSubType = skinDirectory.Parent.Name;
+        string author = skinDirectory.Name.Split("_by_").LastOrDefault() ?? string.Empty;
+        return new LocalSkin(skinName, skinType, skinSubType, skinDirectory.FullName, author,
+            [..await GetScreenShots(screenshotsFolder)]);
     }
 
-    private async Task<IEnumerable<string>> GetScreenShots(string screenshotsFolder)
-    {
-        if (await DirectoryExistsAsync(screenshotsFolder))
+    private static async Task<ImmutableList<string>> GetScreenShots(string screenshotsFolder){
+        bool folderExists = false;
+        (await DirectoryExistsAsync(screenshotsFolder)).IfSucc(exists => folderExists = exists);
+        if (folderExists)
         {
-            return new DirectoryInfo(screenshotsFolder).GetFiles().Select(x => x.FullName);
+            return new DirectoryInfo(screenshotsFolder).GetFiles().Select(x => x.FullName).ToImmutableList();
         }
         else
         {
             return [];
         }
     }
-
-    private static (string name, string description, string author) GetSkinNameAndDescription(string skinDirectoryName, string subTypeDirectoryName)
-    {
-        if (skinDirectoryName.Contains("_by_", StringComparison.OrdinalIgnoreCase))
-        {
-            int authorStartIndex = skinDirectoryName.IndexOf("_by_", StringComparison.Ordinal);
-            
-            string name = skinDirectoryName.Split("_by_")[1];
-            string description =
-                $"{skinDirectoryName} {subTypeDirectoryName} skin {skinDirectoryName.Remove(authorStartIndex)}.";
-            string author = skinDirectoryName.Split("_by_").Last();
-            
-            return (name, description, author);
-        }
-        else
-        {
-            string description = $"{skinDirectoryName} {subTypeDirectoryName} skin {skinDirectoryName}.";
-            return (skinDirectoryName, description, "Unknown");
-        }
-    }
     
-    private async Task<bool> DirectoryExistsAsync(string directoryName)
+    private static async Task<Fin<bool>> DirectoryExistsAsync(string directoryName)
     {
         try
         {
@@ -111,8 +76,7 @@ public class LocalSkinsAccessService(IMessenger theMessenger)
         }
         catch (Exception ex)
         {
-            theMessenger.Send(new OperationErrorMessage(ex.GetType().Name, ex.Message));
-            return false;
+            return Fin<bool>.Fail(ex);
         }
     }
 }

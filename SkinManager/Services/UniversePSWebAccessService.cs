@@ -1,161 +1,155 @@
 ﻿using HtmlAgilityPack;
-using SkinManager.Models;
+using SkinManager.Types;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace SkinManager.Services;
 
-public class UniversePSWebAccessService : ISkinsAccessService
+public static class UniversePsWebAccessService
 {
-    private readonly Dictionary<SkinType, string> skinTypeAddresses = [];
-    private readonly HttpClient _httpClient;
+    private static readonly Dictionary<(string SkinType, string SkinSubType), string> _skinTypeAddresses = PopulateAddresses();
 
     #region Web Address Strings
 
-    private const string baseSiteAddress = "http://universps.online.fr/pso/bb/skin/listeSkinUS.php5";
-    private const string baseScreenshotsAddress = "http://universps.online.fr/pso/bb/skin/";
-    private const string baseDownloadAddress = "http://universps.online.fr/pso/bb/skin/";
+    private const string BaseSiteAddress = "http://universps.online.fr/pso/bb/skin/listeSkinUS.php5";
+    private const string BaseScreenshotsAddress = "http://universps.online.fr/pso/bb/skin/";
+    private const string BaseDownloadAddress = "http://universps.online.fr/pso/bb/skin/";
 
-    private const string areaSkinsAddress = "?cat=17";
+    private const string AreaSkinsAddress = "?cat=17";
 
     //private const string magSkinsAddress = "?cat=36";
-    private const string packSkinsAddress = "?cat=36";
-    private const string humarSkinsAddress = "?cat=1";
-    private const string hunewearlSkinsAddress = "?cat=2";
-    private const string hucastSkinsAddress = "?cat=3";
-    private const string hucasealSkinsAddress = "?cat=4";
-    private const string ramarSkinsAddress = "?cat=5";
-    private const string ramarlSkinsAddress = "?cat=6";
-    private const string racastSkinsAddress = "?cat=7";
-    private const string racasealSkinsAddress = "?cat=8";
-    private const string fomarSkinsAddress = "?cat=9";
-    private const string fomarlSkinsAddress = "?cat=10";
-    private const string fonewmSkinsAddress = "?cat=11";
-    private const string fonewearlSkinsAddress = "?cat=12";
-    private const string ninjaSkinsAddress = "?cat=22";
-    private const string ricoSkinsAddress = "?cat=23";
-    private const string sonicSkinsAddress = "?cat=19";
-    private const string knucklesSkinsAddress = "?cat=21";
-    private const string tailsSkinsAddress = "?cat=20";
-    private const string flowenSkinsAddress = "?cat=25";
-    private const string ellySkinsAddress = "?cat=24";
-    private const string momokaSkinsAddress = "?cat=26";
-    private const string ireneSkinsAddress = "?cat=29";
-    private const string guildHostessSkinsAddress = "?cat=27";
-    private const string enemySkinsAddress = "?cat=14";
-    private const string npcSkinsAddress = "?cat=32";
-    private const string titleScreenSkinsAddress = "?cat=34";
-    private const string hudSkinsAddress = "?cat=16";
-    private const string textSkinsAddress = "?cat=33";
-    private const string objectSkinsAddress = "?cat=15";
-    private const string effectSkinsAddress = "?cat=18";
-    private const string otherSkinsAddress = "?cat=30";
+    private const string PackSkinsAddress = "?cat=36";
+    private const string HumarSkinsAddress = "?cat=1";
+    private const string HunewearlSkinsAddress = "?cat=2";
+    private const string HucastSkinsAddress = "?cat=3";
+    private const string HucasealSkinsAddress = "?cat=4";
+    private const string RamarSkinsAddress = "?cat=5";
+    private const string RamarlSkinsAddress = "?cat=6";
+    private const string RacastSkinsAddress = "?cat=7";
+    private const string RacasealSkinsAddress = "?cat=8";
+    private const string FomarSkinsAddress = "?cat=9";
+    private const string FomarlSkinsAddress = "?cat=10";
+    private const string FonewmSkinsAddress = "?cat=11";
+    private const string FonewearlSkinsAddress = "?cat=12";
+    private const string NinjaSkinsAddress = "?cat=22";
+    private const string RicoSkinsAddress = "?cat=23";
+    private const string SonicSkinsAddress = "?cat=19";
+    private const string KnucklesSkinsAddress = "?cat=21";
+    private const string TailsSkinsAddress = "?cat=20";
+    private const string FlowenSkinsAddress = "?cat=25";
+    private const string EllySkinsAddress = "?cat=24";
+    private const string MomokaSkinsAddress = "?cat=26";
+    private const string IreneSkinsAddress = "?cat=29";
+    private const string GuildHostessSkinsAddress = "?cat=27";
+    private const string EnemySkinsAddress = "?cat=14";
+    private const string NpcSkinsAddress = "?cat=32";
+    private const string TitleScreenSkinsAddress = "?cat=34";
+    private const string HudSkinsAddress = "?cat=16";
+    private const string TextSkinsAddress = "?cat=33";
+    private const string ObjectSkinsAddress = "?cat=15";
+    private const string EffectSkinsAddress = "?cat=18";
+    private const string OtherSkinsAddress = "?cat=30";
+
+    private static readonly IEnumerable<string> Areas =[
+        "Forest", "Caves", "Mines", "Ruins", "Jungle",
+        "Mountain", "Seaside", "CCA", "Seabed", "Crater", "Desert", "Lobby", "City", "Temple", "Spaceship",
+        "Towers"
+    ];
+
+    private static readonly IEnumerable<string> Enemies =[
+        "Booma", "Gobooma", "Gigobooma", "Rappy",
+        "Al Rappy", "Rappy Family", "Monest", "Mothmant", "Savage Wolf", "Barbarouse Wolf", "Hildebear",
+        "Hildeblue", "Hidelt", "Hildetorr", "Dargon", "Sil Dragon", "Evil Shark", "Pal Shark", "Guil Shark",
+        "Poison Lily", "Nar Lily", "Grass Assassin", "Nano Dragon", "Pan Arms", "Hiddom", "Migium", "DelRoLe",
+        "DelRalLie", "Gilchic", "Dubchic", "Canadine", "Canane", "Sinow Beat", "Sinow Gold", "Garanz",
+        "Vol Opt", "Dimenian", "La Dimenian", "So Dimenian", "Claw", "Bulclaw", "Bulk", "Delsaber",
+        "Dark Belra", "Chaos Sorcerer", "Dark Gunner", "Chaos Bringer", "Dark Falz", "Merillia", "Meritas",
+        "Mericarol", "Ul Gibbon", "Zol Gibbon", "Gibbles", "Gee", "Gi Gue", "Sinow Berril", "Sinow Spigell",
+        "Gol Dragon", "Gal Gryphon", "Domolm", "Dolmdari", "Recon", "Reconbox", "Sinow Zoa", "Sinow Zele",
+        "Morfos", "Deldepth", "Delbiter", "Epsilon", "Olga Flow", "Sand Rappy", "Del Rappy", "Girtablublu",
+        "Goran", "Pyro Goran", "Goran Detonator", "Merissa A", "Merissa AA", "Zu", "Pazuzu",
+        "Satellite Lizard", "Yowie"
+    ];
+
+    private static readonly IEnumerable<string> Effects = ["Attack", "Buff", "Healing", "Other"];
 
     #endregion
 
-    public UniversePSWebAccessService(HttpClient httpClient)
-    {
-        _httpClient = httpClient;
-        Dictionary<SkinsSource, DateOnly> currentDate = [];
-        currentDate.Add(SkinsSource.UniversPS, DateOnly.FromDateTime(DateTime.Now));
-
-        skinTypeAddresses.Add(SkinType.Create("Area", [
-            "Forest", "Caves", "Mines", "Ruins", "Jungle",
-            "Mountain", "Seaside", "CCA", "Seabed", "Crater", "Desert", "Lobby", "City", "Temple", "Spaceship",
-            "Towers"
-        ], currentDate), areaSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Pack", ["Other"], currentDate), packSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Class", ["Humar"], currentDate), humarSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Class", ["Hunewearl"], currentDate), hunewearlSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Class", ["Hucast"], currentDate), hucastSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Class", ["Hucaseal"], currentDate), hucasealSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Class", ["Ramar"], currentDate), ramarSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Class", ["Ramarl"], currentDate), ramarlSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Class", ["Racast"], currentDate), racastSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Class", ["Racaseal"], currentDate), racasealSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Class", ["Fomar"], currentDate), fomarSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Class", ["Fomarl"], currentDate), fomarlSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Class", ["Fonewm"], currentDate), fonewmSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Class", ["Fonewearl"], currentDate), fonewearlSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("NPC", ["Ninja"], currentDate), ninjaSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("NPC", ["Rico"], currentDate), ricoSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("NPC", ["Sonic"], currentDate), sonicSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("NPC", ["Knuckles"], currentDate), knucklesSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("NPC", ["Tails"], currentDate), tailsSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("NPC", ["Flowen"], currentDate), flowenSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("NPC", ["Elly"], currentDate), ellySkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("NPC", ["Momoka"], currentDate), momokaSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("NPC", ["Irene"], currentDate), ireneSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("NPC", ["Guild"], currentDate), guildHostessSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("NPC", ["Other"], currentDate), npcSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Enemy", [
-            "Booma", "Gobooma", "Gigobooma", "Rappy",
-            "Al Rappy", "Rappy Family", "Monest", "Mothmant", "Savage Wolf", "Barbarouse Wolf", "Hildebear",
-            "Hildeblue", "Hidelt", "Hildetorr", "Dargon", "Sil Dragon", "Evil Shark", "Pal Shark", "Guil Shark",
-            "Poison Lily", "Nar Lily", "Grass Assassin", "Nano Dragon", "Pan Arms", "Hiddom", "Migium", "DelRoLe",
-            "DelRalLie", "Gilchic", "Dubchic", "Canadine", "Canane", "Sinow Beat", "Sinow Gold", "Garanz",
-            "Vol Opt", "Dimenian", "La Dimenian", "So Dimenian", "Claw", "Bulclaw", "Bulk", "Delsaber",
-            "Dark Belra", "Chaos Sorcerer", "Dark Gunner", "Chaos Bringer", "Dark Falz", "Merillia", "Meritas",
-            "Mericarol", "Ul Gibbon", "Zol Gibbon", "Gibbles", "Gee", "Gi Gue", "Sinow Berril", "Sinow Spigell",
-            "Gol Dragon", "Gal Gryphon", "Domolm", "Dolmdari", "Recon", "Reconbox", "Sinow Zoa", "Sinow Zele",
-            "Morfos", "Deldepth", "Delbiter", "Epsilon", "Olga Flow", "Sand Rappy", "Del Rappy", "Girtablublu",
-            "Goran", "Pyro Goran", "Goran Detonator", "Merissa A", "Merissa AA", "Zu", "Pazuzu",
-            "Satellite Lizard", "Yowie"
-        ], currentDate), enemySkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("UI", ["Title Screen"], currentDate), titleScreenSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("UI", ["HUD"], currentDate), hudSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("UI", ["Text"], currentDate), textSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Object", ["Other"], currentDate), objectSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Effect", ["Attack", "Buff", "Healing", "Other"], currentDate),
-            effectSkinsAddress);
-        skinTypeAddresses.Add(SkinType.Create("Other", ["Misc"], currentDate), otherSkinsAddress);
+    private static Dictionary<(string SkinType, string SkinSubType), string> PopulateAddresses(){
+        Dictionary<(string SkinType, string SkinSubType), string> skinTypeAddresses = new();
+        skinTypeAddresses.Add(new("Area", string.Empty), AreaSkinsAddress);
+        skinTypeAddresses.Add(new("Pack", "Other"), PackSkinsAddress);
+        skinTypeAddresses.Add(new("Class", "Humar"), HumarSkinsAddress);
+        skinTypeAddresses.Add(new("Class", "Hunewearl"), HunewearlSkinsAddress);
+        skinTypeAddresses.Add(new("Class", "Hucast"), HucastSkinsAddress);
+        skinTypeAddresses.Add(new("Class", "Hucaseal"), HucasealSkinsAddress);
+        skinTypeAddresses.Add(new("Class", "Ramar"), RamarSkinsAddress);
+        skinTypeAddresses.Add(new("Class", "Ramarl"), RamarlSkinsAddress);
+        skinTypeAddresses.Add(new("Class", "Racast"), RacastSkinsAddress);
+        skinTypeAddresses.Add(new("Class", "Racaseal"), RacasealSkinsAddress);
+        skinTypeAddresses.Add(new("Class", "Fomar"), FomarSkinsAddress);
+        skinTypeAddresses.Add(new("Class", "Fomarl"), FomarlSkinsAddress);
+        skinTypeAddresses.Add(new("Class", "Fonewm"), FonewmSkinsAddress);
+        skinTypeAddresses.Add(new("Class", "Fonewearl"), FonewearlSkinsAddress);
+        skinTypeAddresses.Add(new("NPC", "Ninja"), NinjaSkinsAddress);
+        skinTypeAddresses.Add(new("NPC", "Rico"), RicoSkinsAddress);
+        skinTypeAddresses.Add(new("NPC", "Sonic"), SonicSkinsAddress);
+        skinTypeAddresses.Add(new("NPC", "Knuckles"), KnucklesSkinsAddress);
+        skinTypeAddresses.Add(new("NPC", "Tails"), TailsSkinsAddress);
+        skinTypeAddresses.Add(new("NPC", "Flowen"), FlowenSkinsAddress);
+        skinTypeAddresses.Add(new("NPC", "Elly"), EllySkinsAddress);
+        skinTypeAddresses.Add(new("NPC", "Momoka"), MomokaSkinsAddress);
+        skinTypeAddresses.Add(new("NPC", "Irene"), IreneSkinsAddress);
+        skinTypeAddresses.Add(new("NPC", "Guild"), GuildHostessSkinsAddress);
+        skinTypeAddresses.Add(new("NPC", "Other"), NpcSkinsAddress);
+        skinTypeAddresses.Add(new("Enemy", string.Empty), EnemySkinsAddress);
+        skinTypeAddresses.Add(new("UI", "Title Screen"), TitleScreenSkinsAddress);
+        skinTypeAddresses.Add(new("UI", "HUD"), HudSkinsAddress);
+        skinTypeAddresses.Add(new("UI", "Text"), TextSkinsAddress);
+        skinTypeAddresses.Add(new("Object", "Other"), ObjectSkinsAddress);
+        skinTypeAddresses.Add(new("Effect", string.Empty),EffectSkinsAddress);
+        skinTypeAddresses.Add(new("Other", "Misc"), OtherSkinsAddress);
+        return skinTypeAddresses;
     }
 
-    public async Task<IEnumerable<Skin>> GetAvailableSkinsForSpecificTypeAsync(SkinType localSkinType)
+    public static async Task<ImmutableList<WebSkin>> GetAvailableSkinsAsync(HttpClient httpClient)
     {
-        SkinType webSkinType = skinTypeAddresses
-            .First(x => x.Key.Name.Equals(localSkinType.Name, StringComparison.OrdinalIgnoreCase)).Key;
+        List<WebSkin> skins = [];
 
-        return await GetSkinsFromWebsite(webSkinType, skinTypeAddresses[webSkinType]);
-    }
-
-    public async Task<IEnumerable<Skin>> GetAvailableSkinsAsync()
-    {
-        List<Skin> skins = [];
-
-        foreach (KeyValuePair<SkinType, string> currentPair in skinTypeAddresses)
+        foreach (KeyValuePair<(string, string),string> currentPair in _skinTypeAddresses)
         {
-            skins.AddRange(await GetSkinsFromWebsite(currentPair.Key, currentPair.Value));
+            skins.AddRange(await GetSkinsFromWebsite(httpClient, currentPair.Key.Item1, currentPair.Key.Item2, currentPair.Value));
         }
 
-        return skins;
+        return skins.ToImmutableList();
     }
 
-    private async Task<IEnumerable<Skin>> GetSkinsFromWebsite(SkinType webSkinType, string address)
+    private static async Task<ImmutableList<WebSkin>> GetSkinsFromWebsite(HttpClient httpClient, string skinType, string skinSubType, string address)
     {
-        string response = await _httpClient.GetStringAsync(baseSiteAddress + address);
+        string response = await httpClient.GetStringAsync(BaseSiteAddress + address);
 
         HtmlDocument theDoc = new();
 
         theDoc.LoadHtml(response);
 
         //The html lists each author in a div with an attribute name with a value that starts with cat_.
-        IEnumerable<HtmlNode> authors = theDoc.DocumentNode.SelectNodes("//div[@class='title1 titreCategorie']");
+        IEnumerable<HtmlNode> authors = theDoc.DocumentNode.SelectNodes("//div[@class='title1 titreCategorie']")!;
 
         //The html lists skins for each author in a tbody under the respective author div but not as a child of the author div.
         IEnumerable<HtmlNode> skinTables =
-            theDoc.DocumentNode.SelectNodes("//tbody[@class='contenuCategorieSkin']");
+            theDoc.DocumentNode.SelectNodes("//tbody[@class='contenuCategorieSkin']")!;
 
-        IEnumerator<HtmlNode> skinTablesEnumerator = skinTables.GetEnumerator();
+        using var skinTablesEnumerator = skinTables.GetEnumerator();
 
         string currentAuthor = string.Empty;
         string currentSkinName = string.Empty;
         string currenSkinAddDate = string.Empty;
         string currentSkinDownloadLink = string.Empty;
-        List<Skin> foundSkins = [];
+        List<WebSkin> foundSkins = [];
         List<string> currenSkinScreenshots = [];
 
         foreach (HtmlNode authorNode in authors)
@@ -170,7 +164,7 @@ public class UniversePSWebAccessService : ISkinsAccessService
                 HtmlNode skinTableNodes = skinTablesEnumerator.Current;
 
                 //The html lists each skin row as a tr with attribute class with value ligneSkin.
-                IEnumerable<HtmlNode> skinRows = skinTableNodes.SelectNodes(".//tr[@class='ligneSkin']");
+                IEnumerable<HtmlNode> skinRows = skinTableNodes.SelectNodes(".//tr[@class='ligneSkin']")!;
 
                 foreach (HtmlNode skinRow in skinRows)
                 {
@@ -191,7 +185,7 @@ public class UniversePSWebAccessService : ISkinsAccessService
                                 ".//a[contains(@href,'telechargement') and contains(@href,'&t=d')]")
                             ?.GetAttributeValue("href", string.Empty) ?? string.Empty;
 
-                    currentSkinDownloadLink = string.Concat(baseDownloadAddress, currentSkinDownloadLink);
+                    currentSkinDownloadLink = string.Concat(BaseDownloadAddress, currentSkinDownloadLink);
 
                     //The html lists the full size skin screenshot(s) in the second row in a nodes with an href attribute that contains imageSkin/.
                     //IEnumerable<HtmlNode> currentSkinScreenshotNodes = skinRow.SelectNodes(".//td/a[@class='highslide' and contains(@href,'imageSkin/')]");
@@ -205,43 +199,31 @@ public class UniversePSWebAccessService : ISkinsAccessService
                         currenSkinScreenshots = [];
                         foreach (HtmlNode screenShotNode in currentSkinScreenshotNodes)
                         {
-                            currenSkinScreenshots.Add(string.Concat(baseScreenshotsAddress,
+                            currenSkinScreenshots.Add(string.Concat(BaseScreenshotsAddress,
                                 screenShotNode.Attributes["src"].Value));
                         }
                     }
 
-                    string currentSkinSubType = GetSkinSubType(webSkinType, currentSkinName);
-                    string description = $"{webSkinType.Name} {currentSkinSubType} skin {currentSkinName}.";
+                    string currentSkinSubType = skinSubType == string.Empty ? GetSkinSubType(skinType, currentSkinName) : skinSubType;
                     DateOnly currentDate = DateOnly.ParseExact(currenSkinAddDate, "dd/MM/yyyy");
-                    Skin tempSkin = Skin.Create
+                    WebSkin tempSkin = new
                     (
-                        webSkinType.Name, currentSkinSubType, currentSkinName,
-                        [currentSkinDownloadLink], currentAuthor, description, currentDate, currentDate,
-                        currenSkinScreenshots,SkinsSource.UniversPS
+                        currentSkinName, skinType, currentSkinSubType, address, currentAuthor, [currentSkinDownloadLink],
+                        currenSkinScreenshots.ToImmutableList()
                     );
                     foundSkins.Add(tempSkin);
                 }
             }
         }
 
-        return foundSkins;
+        return foundSkins.ToImmutableList();
     }
 
-    private string GetSkinSubType(SkinType webSkinType, string skinName)
-    {
-        foreach (string currentSubType in webSkinType.SubTypes)
-        {
-            if (skinName.Contains(currentSubType, StringComparison.OrdinalIgnoreCase))
-            {
-                return currentSubType;
-            }
-        }
-
-        if (webSkinType.Name != "Area")
-        {
+    private static string GetSkinSubType(string skinType, string skinName){
+        if (skinType == "Area") return Areas.FirstOrDefault(skinName.Contains) ?? "Other";
+        else if (skinType == "Enemy") return Enemies.FirstOrDefault(skinName.Contains) ?? "Other";
+        else if (skinType == "Effect") return Effects.FirstOrDefault(skinName.Contains) ?? "Other";
+        
             return "Other";
-        }
-
-        return webSkinType.SubTypes[0];
     }
 }

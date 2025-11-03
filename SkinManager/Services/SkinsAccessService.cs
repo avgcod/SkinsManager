@@ -1,344 +1,293 @@
-﻿using CommunityToolkit.Mvvm.Messaging;
-using Microsoft.Extensions.DependencyInjection;
-using SkinManager.Models;
+﻿using SkinManager.Types;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using LanguageExt;
 
 namespace SkinManager.Services;
 
-public class SkinsAccessService(
-    IServiceScopeFactory scopeFactory,
-    HttpClient httpClient,
-    Locations locations,
-    IMessenger theMessenger)
-{
-    private GameInfo _psoGame = default!;
-    private List<Skin> _gameSkins = [];
-    private Dictionary<(string,string),Skin> _appliedSkins = [];
+public class SkinsAccessService{
+    private GameInfo _psoGame = new(string.Empty, string.Empty, string.Empty);
+    private ImmutableList<Either<WebSkin, LocalSkin>> _gameSkins =[];
+    private ImmutableDictionary<(string, string), LocalSkin> _appliedSkins = ImmutableDictionary<(string, string), LocalSkin>.Empty;
     private SkinsSource _skinsSource = SkinsSource.Ephinea;
-    
-    private void AddAppliedSkin(string appliedSkinName)
-    {
-        Skin appliedSkin = _gameSkins.First(x => x.Name == appliedSkinName);
-        _appliedSkins[(appliedSkin.SkinType, appliedSkin.SubType)] = appliedSkin;
-    }
-    private void RemoveAppliedSkin(Skin appliedSkin)
-    {
-        _appliedSkins.Remove((appliedSkin.SkinType, appliedSkin.SubType));
+    private ImmutableDictionary<SkinsSource, AddressBook> _addressBooks = ImmutableDictionary<SkinsSource, AddressBook>.Empty;
+
+    private void AddAppliedSkin(string appliedSkinName){
+        LocalSkin appliedSkin = _gameSkins.Rights().First(x => x.SkinName == appliedSkinName);
+            _appliedSkins = _appliedSkins.Remove((appliedSkin.SkinType, appliedSkin.SkinSubType));
+            _appliedSkins = _appliedSkins.Add((appliedSkin.SkinType, appliedSkin.SkinSubType), appliedSkin);
+        
     }
 
-    public async Task<IEnumerable<Skin>> RefreshSkins(bool includeWeb)
-    {
+    private void RemoveAppliedSkin(LocalSkin appliedSkin){
+        _appliedSkins = _appliedSkins.Remove((appliedSkin.SkinType, appliedSkin.SkinSubType));
+    }
+    public async Task RefreshSkins(bool includeWeb){
         await RefreshLocalSkins();
-        
-        if (includeWeb)
-        {
+
+        if (includeWeb){
             await RefreshWebSkinsAsync();
         }
-
-        return _gameSkins;
     }
-    private async Task RefreshLocalSkins()
-    {
-        using IServiceScope serviceScope = scopeFactory.CreateScope();
+    private async Task RefreshLocalSkins(){
 
-        LocalSkinsAccessService skinsAccessService =
-            serviceScope.ServiceProvider.GetRequiredService<LocalSkinsAccessService>();
-
-        IEnumerable<Skin> skins = await skinsAccessService.GetAvailableSkinsAsync(_psoGame
-            .SkinsLocation, _psoGame.SkinTypes);
-
-        UpdateSkins(skins);
+        (await LocalSkinsAccessService.GetAvailableSkinsAsync(_psoGame
+            .SkinsLocation)).IfSucc(UpdateSkins);
     }
-    private async Task RefreshWebSkinsAsync()
-    {
-        using IServiceScope serviceScope = scopeFactory.CreateScope();
+    private async Task RefreshWebSkinsAsync(){
 
-        ISkinsAccessService skinsAccessService;
-
-        if (_skinsSource == SkinsSource.Ephinea)
-        {
-            skinsAccessService =
-                serviceScope.ServiceProvider.GetRequiredService<EphineaWebAccessService>();
+        if (_skinsSource == SkinsSource.Ephinea){
+            var ephineaSkins = await GetEphineaSkins();
+            _gameSkins = _gameSkins.RemoveRange(ephineaSkins.Select(currentSkin => new Either.Left<WebSkin, LocalSkin>(currentSkin)));
+            
+            _gameSkins = _gameSkins.AddRange(ephineaSkins.Select(currentSkin => new Either.Left<WebSkin, LocalSkin>(currentSkin)));
         }
-        else
-        {
-            skinsAccessService = serviceScope.ServiceProvider.GetRequiredService<UniversePSWebAccessService>();
+        else{
+            var universePsSkins = await GetUniversePsSkins();
+            _gameSkins = _gameSkins.RemoveRange(universePsSkins.Select(currentSkin => new Either.Left<WebSkin, LocalSkin>(currentSkin)));
+            
+            _gameSkins = _gameSkins.AddRange(universePsSkins.Select(currentSkin => new Either.Left<WebSkin, LocalSkin>(currentSkin)));
         }
+    }
+    private async Task<ImmutableList<WebSkin>> GetEphineaSkins(){
+        var skinTypes = await EphineaService.GetAvailableSkinTypes(new HttpClient(), _addressBooks[_skinsSource].Main, _addressBooks[_skinsSource].Base);
 
-        DateOnly currentDate = DateOnly.FromDateTime(DateTime.Now);
-        List<SkinType> tempSkinTypes = [];
-
-        foreach (SkinType currentSkinType in _psoGame.SkinTypes)
-        {
-
-            if ((currentDate.DayNumber - currentSkinType.LastOnlineChecks[_skinsSource].DayNumber) > 1)
-            {
-                UpdateSkins(await skinsAccessService.GetAvailableSkinsForSpecificTypeAsync(currentSkinType));
-            }
-
-            Dictionary<SkinsSource, DateOnly> newDates = new Dictionary<SkinsSource, DateOnly>();
-            foreach (SkinsSource currenSkinsSource in currentSkinType.LastOnlineChecks.Keys)
-            {
-                newDates.Add(currenSkinsSource,
-                    currenSkinsSource == _skinsSource
-                        ? currentDate
-                        : currentSkinType.LastOnlineChecks[currenSkinsSource]);
-            }
-
-            tempSkinTypes.Add(currentSkinType with { LastOnlineChecks = newDates });
+        ImmutableList<SkinSiteInformation> newWebSkinSiteInfos = [];
+        foreach (var skinTypeSiteInformation in skinTypes){
+            newWebSkinSiteInfos = newWebSkinSiteInfos.AddRange(await EphineaService.GetAvailableSkins(new HttpClient(), _addressBooks[_skinsSource].Base,
+                skinTypeSiteInformation.Address, skinTypeSiteInformation.Name));
         }
 
-        _psoGame = _psoGame with { SkinTypes = tempSkinTypes };
+        ImmutableList<WebSkin> newWebSkins = [];
+            
+        foreach (var webSkinSiteInfo in newWebSkinSiteInfos){
+            newWebSkins = newWebSkins.Add(await EphineaService.GetSkin(new HttpClient(), webSkinSiteInfo.Address, _addressBooks[_skinsSource].BaseScreenshots, webSkinSiteInfo.SkinType,  webSkinSiteInfo.SkinSubType));
+        }
 
+        return newWebSkins;
     }
-
-    public async Task<string> DownloadSkin(string skinName, int downloadLink)
-    {
-        try
-        {
-            Skin skinToDownload = _gameSkins.First(x => x.Name == skinName);
+    private async Task<ImmutableList<WebSkin>> GetUniversePsSkins() => await UniversePsWebAccessService.GetAvailableSkinsAsync(new HttpClient());
+    public async Task<string> DownloadSkin(HttpClient httpClient, string skinName, int downloadLinkNumber){
+        try{
+            WebSkin skinToDownload = _gameSkins.Lefts().First(x => x.SkinName == skinName);
+            string downloadLink = skinToDownload.DowloadLinks[downloadLinkNumber-1];
             HttpResponseMessage response =
-                await httpClient.GetAsync(skinToDownload.Locations[downloadLink]);
+                await httpClient.GetAsync(downloadLink);
 
             string fileExtension = response.RequestMessage?.RequestUri?.OriginalString.Split('.').Last() ??
                                    string.Empty;
 
-            string filePath = Path.Combine(_psoGame.SkinsLocation, $"{skinToDownload.Name}.{fileExtension}");
+            string filePath = Path.Combine(_psoGame.SkinsLocation, $"{skinToDownload.SkinName}.{fileExtension}");
 
-            await using Stream webStream = await httpClient.GetStreamAsync(skinToDownload.Locations[downloadLink]);
+            await using Stream webStream = await httpClient.GetStreamAsync(downloadLink);
 
             await using Stream skinFileStream = File.Create(filePath);
             await webStream.CopyToAsync(skinFileStream);
             return filePath;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex){
             Console.WriteLine(ex);
             return string.Empty;
         }
     }
-    private void ChangeWebSkinToLocalSkin(string skinName, string newLocalSkinPath)
-    {
-        Skin currentSkin = _gameSkins.First(x => x.Name == skinName);
-        _gameSkins.Remove(currentSkin);
+    private void ChangeWebSkinToLocalSkin(string skinName, string newLocalSkinPath){
+        WebSkin currentSkin = _gameSkins.Lefts().First(x => x.SkinName == skinName);
+        _gameSkins = _gameSkins.Remove(currentSkin);
 
-        currentSkin = currentSkin with { Locations = [newLocalSkinPath], Source = SkinsSource.Local};
-        
-        _gameSkins.Add(currentSkin);
+        LocalSkin newLocalSkin = new(currentSkin.SkinName, currentSkin.SkinType, currentSkin.SkinSubType, newLocalSkinPath, currentSkin.Author, currentSkin.ScreenshotLinks);
+
+        _gameSkins = _gameSkins.Add(newLocalSkin);
     }
-    private void UpdateSkins(IEnumerable<Skin> skins)
-    {
-        if (_gameSkins.Count == 0)
-        {
-            _gameSkins.AddRange(skins);
+    private void UpdateSkins(IEnumerable<LocalSkin> skins){
+        if (_gameSkins.Count == 0){
+            _gameSkins = _gameSkins.AddRange(skins.Select(currentSkin => new Either.Right<WebSkin, LocalSkin>(currentSkin)));
         }
-        else
-        {
-            List<Skin> newSkins = skins
-                .Where(tempSkin => !_gameSkins
-                    .Select(currentSkin => currentSkin.Name).Contains(tempSkin.Name)).ToList();
+        else{
+            IEnumerable<LocalSkin> newSkins = skins
+                .Where(tempSkin => !_gameSkins.Rights()
+                    .Select(currentSkin => currentSkin.SkinName).Contains(tempSkin.SkinName));
 
-            _gameSkins.AddRange(newSkins);
+           _gameSkins = _gameSkins.AddRange(newSkins.Select(currentSkin => new Either.Right<WebSkin, LocalSkin>(currentSkin)));
         }
     }
-    public async Task<bool> ApplySkin(string skinName, bool isEphinea)
-    {
-        string skinDirectory = _gameSkins.First(x => x.Name == skinName).Locations[0];
+    private void UpdateSkins(IEnumerable<WebSkin> skins){
+        if (_gameSkins.Count == 0){
+            _gameSkins = _gameSkins.AddRange(skins.Select(currentSkin => new Either.Left<WebSkin, LocalSkin>(currentSkin)));
+        }
+        else{
+            IEnumerable<WebSkin> newSkins = skins
+                .Where(tempSkin => !_gameSkins.Lefts()
+                    .Select(currentSkin => currentSkin.SkinName).Contains(tempSkin.SkinName));
+
+            _gameSkins = _gameSkins.AddRange(newSkins.Select(currentSkin => new Either.Left<WebSkin, LocalSkin>(currentSkin)));
+        }
+    }
+    public async Task<bool> ApplySkin(string skinName, bool isEphinea){
+        string skinDirectory = _gameSkins.Rights().First(x => x.SkinName == skinName).SkinLocation;
         string gameDirectory = _psoGame.GameLocation;
-        if (await FileAccessService.ApplySkinAsync(skinDirectory, gameDirectory))
-        {
+        if (await FileAccessService.ApplySkinAsync(skinDirectory, gameDirectory)){
             AddAppliedSkin(skinName);
             return true;
         }
 
         return false;
     }
-    public async Task<bool> CreateBackup(string skinName)
-    {
-        Skin selectedSkin = _gameSkins.First(x => x.Name == skinName);
+    public async Task<Fin<bool>> CreateBackup(string skinName){
+        LocalSkin selectedSkin = _gameSkins.Rights().First(x => x.SkinName == skinName);
         string backupLocation = GetBackupLocation(skinName);
-        return await FileAccessService.CreateBackUpAsync(selectedSkin.Locations[0], backupLocation,_psoGame.GameLocation);
+        return await FileAccessService.CreateBackUpAsync(selectedSkin.SkinLocation, backupLocation,
+            _psoGame.GameLocation);
     }
+    public async Task<bool> RestoreBackup(string skinName){
+        LocalSkin selectedSkin = _gameSkins.Rights().First(x => x.SkinName == skinName);
 
-    public bool FolderStructureIsCreated()
-    {
-        return _psoGame.StructureCreated;
-    }
-    public async Task<bool> RestoreBackup(string skinName)
-    {
-        Skin selectedSkin = _gameSkins.First(x => x.Name == skinName);
-
-        if (await FileAccessService.RestoreBackupAsync(selectedSkin.Locations[0], _psoGame.GameLocation))
-        {
+        if (await FileAccessService.RestoreBackupAsync(selectedSkin.SkinLocation, _psoGame.GameLocation)){
             RemoveAppliedSkin(selectedSkin);
             return true;
         }
-        else
-        {
+        else{
             return false;
         }
     }
-    public async Task<bool> BackUpExists(string selectedSkinName)
-    {
-        if(_gameSkins.FirstOrDefault(x => x.Name == selectedSkinName) is { } selectedSkin)
-        {
-            string backupPath =  Path.Combine(_psoGame.SkinsLocation, selectedSkin.SkinType, "Originals", selectedSkin.SubType);
+    public async Task<Fin<bool>> BackUpExists(string selectedSkinName){
+        if (_gameSkins.Rights().FirstOrDefault(x => x.SkinName == selectedSkinName) is{ } selectedSkin){
+            string backupPath = Path.Combine(_psoGame.SkinsLocation, selectedSkin.SkinType, "Originals",
+                selectedSkin.SkinSubType);
             return await FileAccessService.FolderHasFilesAsync(backupPath);
         }
-        
+
         return false;
     }
-
-    public string GetAppliedSkinName(string selectedSkinTypeName, string selectedSkinSubTypeName)
-    {
-        return _appliedSkins.TryGetValue((selectedSkinTypeName, selectedSkinSubTypeName), out Skin? appliedSkin) ? appliedSkin.Name : "None";
+    public string GetAppliedSkinName(string selectedSkinTypeName, string selectedSkinSubTypeName){
+        return _appliedSkins.TryGetValue((selectedSkinTypeName, selectedSkinSubTypeName), out LocalSkin? appliedSkin)
+            ? appliedSkin.SkinName
+            : "None";
     }
-    public IEnumerable<SkinType> GetSkinTypes()
-    {
-        return _psoGame.SkinTypes;
+    public ImmutableList<string> GetSkinTypes(){
+        return _gameSkins.Lefts().Select(currentWebSkin => currentWebSkin.SkinType)
+            .Concat(_gameSkins.Rights().Select(currentLocalSkin => currentLocalSkin.SkinType)).Distinct().ToImmutableList();
     }
-    public IEnumerable<string> GetSkinSubTypes(string selectedSkinTypeName)
-    {
-        return GetSkinTypes().First(x => x.Name == selectedSkinTypeName).SubTypes;
+    public ImmutableList<string> GetSkinSubTypes(string selectedSkinTypeName){
+        return _gameSkins.Lefts().Where(currentWebSkin => currentWebSkin.SkinType  == selectedSkinTypeName)
+            .Select(currentWebSkin => currentWebSkin.SkinSubType)
+            .Concat(_gameSkins.Rights().Where(currentLocalSkin => currentLocalSkin.SkinType == selectedSkinTypeName)
+                .Select(currentLocalSkin => currentLocalSkin.SkinSubType)).Distinct().ToImmutableList();
     }
-    private string GetBackupLocation(string selectedSkinName)
-    {
-        if(_gameSkins.FirstOrDefault(x => x.Name == selectedSkinName) is { } selectedSkin)
-        {
-            return Path.Combine(_psoGame.SkinsLocation, selectedSkin.SkinType, "Originals", selectedSkin.SubType);
+    public ImmutableList<string> GetAvailableSkinNames(string skinType, string skinSubType){
+        return _gameSkins.Lefts()
+            .Where(x => x.SkinType == skinType &&
+                        x.SkinSubType == skinSubType)
+            .Select(x => x.SkinName)
+            .Concat(_gameSkins.Rights()
+                .Where(x => x.SkinType == skinType && x.SkinSubType == skinSubType)
+                .Select(x => x.SkinName)).ToImmutableList();
+    }
+    public bool GetIsWebSkinSelected(string selectedSkinName) => _gameSkins.Lefts().Any(currentWebSkin => currentWebSkin.SkinName == selectedSkinName);
+    public ImmutableList<string> GetSkinScreenshots(string skinName){
+        return _gameSkins.Lefts().FirstOrDefault(currentSkin => currentSkin.SkinName == skinName)?.ScreenshotLinks
+               ?? _gameSkins.Rights().First(currentSkin => currentSkin.SkinName == skinName).ScreenshotFileNames;
+    }
+    private string GetBackupLocation(string selectedSkinName){
+        if (_gameSkins.Rights().FirstOrDefault(x => x.SkinName == selectedSkinName) is{ } selectedSkin){
+            return Path.Combine(_psoGame.SkinsLocation, selectedSkin.SkinType, "Originals",
+                selectedSkin.SkinSubType);
         }
-        else
-        {
+        else{
             return string.Empty;
         }
     }
-    public string GetGameExecutableLocation()
-    {
+    public string GetGameExecutableLocation(){
         return _psoGame.GameExecutable;
     }
-    public string GetGameLocation()
-    {
+    public string GetGameLocation(){
         return _psoGame.GameLocation;
     }
-    public string GetSkinsLocation()
-    {
+    public string GetSkinsLocation(){
         return _psoGame.SkinsLocation;
     }
-
-    public async Task<bool> ExtractSkin(string skinName, string archivePath)
-    {
+    public async Task<bool> ExtractSkin(string skinName, string archivePath){
         string fileExtension = Path.GetExtension(archivePath);
-        
-        if (fileExtension == "zip")
-        {
-            Skin skinToDownload = _gameSkins.First(x => x.Name == skinName);
+
+        if (fileExtension == "zip"){
+            WebSkin skinToDownload = _gameSkins.Lefts().First(x => x.SkinName == skinName);
             string newSkinPath = Path.Combine(_psoGame.SkinsLocation, skinToDownload.SkinType,
-                skinToDownload.SubType, skinToDownload.Name);
-            
-            if (await FileAccessService.ExtractSkinAsync(archivePath, newSkinPath))
-            {
-                ChangeWebSkinToLocalSkin(skinToDownload.Name, newSkinPath);
+                skinToDownload.SkinSubType, skinToDownload.SkinName);
+
+            if (await FileAccessService.ExtractSkinAsync(archivePath, newSkinPath)){
+                ChangeWebSkinToLocalSkin(skinToDownload.SkinName, newSkinPath);
                 return true;
             }
         }
-        
-        return false;
-    }
-    public async Task<bool> SaveScreenshots(string skinName)
-    {
-        Skin theSkin  = _gameSkins.First(x => x.Name == skinName);
-        
-        if (theSkin.Screenshots.Any())
-        {
-            string screenshotsPath = Path.Combine(_psoGame.SkinsLocation, theSkin.SkinType, theSkin.SubType, theSkin.Name, "Screenshots");
-            return await FileAccessService.SaveScreenshotsAsync(screenshotsPath, theSkin.Screenshots);
-        }
 
         return false;
     }
-    public async Task LoadInformation()
-    {
+    public async Task<Fin<bool>> SaveScreenshots(string skinName){
+        LocalSkin theSkin = _gameSkins.Rights().First(x => x.SkinName == skinName);
 
-        if(await FileAccessService.LoadJsonToObject<GameInfo>(locations.GameInfoFile) is not { } gameInfo)
-        {
-            theMessenger.Send(new FatalErrorMessage("IO Exception", $"Unable to find the {locations.GameInfoFile} file."));
-        }
-        else
-        {
-            _psoGame = gameInfo;
-            DateOnly currentDate = DateOnly.FromDateTime(DateTime.Now.AddDays(-2));
-            for (int i = 0; i < _psoGame.SkinTypes.Count; i++)
-            {
-                if (_psoGame.SkinTypes[i].LastOnlineChecks is null)
-                {
-                    Dictionary<SkinsSource, DateOnly> newChecks = [];
-
-                    foreach (SkinsSource currentSource in Enum.GetValues(typeof(SkinsSource)))
-                    {
-                        if(currentSource != SkinsSource.Local)
-                        {
-                            newChecks.Add(currentSource, currentDate);                            
-                        }
-                        _psoGame.SkinTypes[i] = _psoGame.SkinTypes[i] with { LastOnlineChecks = newChecks };
-                    }                    
-                }
-            }
+        if (theSkin.ScreenshotFileNames.Any()){
+            string screenshotsPath = Path.Combine(_psoGame.SkinsLocation, theSkin.SkinType,
+                theSkin.SkinSubType, theSkin.SkinName, "Screenshots");
+            return await FileAccessService.SaveScreenshotsAsync(screenshotsPath, theSkin.ScreenshotFileNames);
         }
 
-        UpdateSkins(await FileAccessService.LoadJsonToIEnumerable<Skin>(locations.CachedSkinsFile));
-        UpdateAppliedSkins(await FileAccessService.LoadJsonToIEnumerable<Skin>(locations.AppliedSkinsFile));
-
+        return false;
     }
+    public async Task LoadInformation(Locations locations){
+        if (await FileAccessService.LoadJsonToObject<GameInfo>(nameof(GameInfo) + ".json") is not{ } gameInfoResult){
+            /*theMessenger.Send(new FatalErrorMessage("IO Exception",
+                $"Unable to find the {locations.GameInfoFile} file."));*/
+        }
+        else{
+            gameInfoResult.IfSucc(possibleGameInfo => {
+                possibleGameInfo.IfSome(gameInfo => {
+                    _psoGame = gameInfo;
+                });
+            });
+        }
+        
+        if (await FileAccessService.LoadJsonToObject<AddressBook>(nameof(SkinsSource.Ephinea) + "AddressBook.json") is not{ } addessBookResult){
+            /*theMessenger.Send(new FatalErrorMessage("IO Exception",
+                $"Unable to find the {nameof(SkinsSource.Ephinea) + "AddressBook.json"} file."));*/
+        }
+        else{
+            addessBookResult.IfSucc(possibleAddressBook => {
+                possibleAddressBook.IfSome(theAddressBook => {
+                    _addressBooks = _addressBooks.Add(SkinsSource.Ephinea,theAddressBook);
+                });
+            });
+        }
 
-    private void UpdateAppliedSkins(IEnumerable<Skin> appliedSkins)
-    {
-        foreach (Skin currentSkin in appliedSkins)
-        {
-            _appliedSkins.Add((currentSkin.SkinType, currentSkin.SubType), currentSkin);
+        (await FileAccessService.LoadJsonToIEnumerable<WebSkin>("CachedSkins.json")).IfSucc(UpdateSkins);
+        (await FileAccessService.LoadJsonToIEnumerable<LocalSkin>("AppliedSkins.json")).IfSucc(UpdateAppliedSkins);
+    }
+    private void UpdateAppliedSkins(IEnumerable<LocalSkin> appliedSkins){
+        foreach (LocalSkin currentSkin in appliedSkins){
+            _appliedSkins = _appliedSkins.Add((currentSkin.SkinType, currentSkin.SkinSubType), currentSkin);
         }
     }
-
-    public async Task SaveInformation()
-    {
-        List<Task> tasks =
-        [
-            FileAccessService.SaveIEnumerableToJson(_gameSkins, locations.CachedSkinsFile),
+    public async Task SaveInformation(Locations locations){
+        List<Task> tasks =[
             FileAccessService.SaveObjectToJson(_psoGame, locations.GameInfoFile),
+            FileAccessService.SaveObjectToJson(_gameSkins.Lefts(), locations.CachedSkinsFile),
             FileAccessService.SaveIEnumerableToJson(_appliedSkins, locations.AppliedSkinsFile)
         ];
         await Task.WhenAll(tasks);
     }
-    public void SetSkinsSource(SkinsSource skinsSource)
-    {
+    public void SetSkinsSource(SkinsSource skinsSource){
         _skinsSource = skinsSource;
     }
-    public IEnumerable<Skin> GetSkins()
-    {
-        return _gameSkins;
+    public void SetSkinsLocation(string skinsLocation){
+        _psoGame = _psoGame with{ SkinsLocation = skinsLocation };
     }
-
-    public async Task CreateStructureAsync()
-    {
-        await FileAccessService.CreateStructureAsync(_psoGame.SkinTypes, _psoGame.SkinsLocation);
+    public void SetGameLocation(string gameLocation){
+        _psoGame = _psoGame with{ GameLocation = gameLocation };
     }
-
-    public void SetSkinsLocation(string skinsLocation)
-    {
-        _psoGame = _psoGame with { SkinsLocation = skinsLocation};
-    }
-
-    public void SetGameLocation(string gameLocation)
-    {
-        _psoGame = _psoGame with { GameLocation = gameLocation };
-    }
-
-    public void SetGameExecutableLocation(string gameExecutableLocation)
-    {
-        _psoGame = _psoGame with { GameExecutable = gameExecutableLocation };
+    public void SetGameExecutableLocation(string gameExecutableLocation){
+        _psoGame = _psoGame with{ GameExecutable = gameExecutableLocation };
     }
 }

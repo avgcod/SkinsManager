@@ -1,12 +1,7 @@
-﻿using Avalonia.Controls;
-using Avalonia.Data.Converters;
-using SkinManager.Models;
+﻿using Avalonia.Data.Converters;
+using SkinManager.Types;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SkinManager.Converters
 {

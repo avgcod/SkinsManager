@@ -8,9 +8,9 @@
     xmlns:vm="using:SkinManager.ViewModels"
     Title="Skin Manager"
     MinWidth="600"
-    MinHeight="475"
+    MinHeight="325"
     Width="600"
-    Height="450"
+    Height="800"
     x:DataType="vm:MainWindowViewModel"
     CanResize="True"
     Icon="/Assets/toomanyboxesforaman.ico"
@@ -21,7 +21,7 @@
         <converters:SelectedSourceEnumToTestConverter x:Key="SelectedSourceEnumToTestConverter" />
     </Window.Resources>
 
-    <Grid>
+    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
         <StackPanel
             Grid.ColumnSpan="2"
             VerticalAlignment="Center"
@@ -42,8 +42,7 @@
                 <RowDefinition Height="auto" />
                 <RowDefinition Height="auto" />
                 <RowDefinition Height="auto" />
-                <RowDefinition Height="auto" />
-                <RowDefinition Height="auto" />
+                <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
             <Grid.ColumnDefinitions>
@@ -80,7 +79,7 @@
                 Grid.Row="0"
                 Grid.Column="3"
                 HorizontalAlignment="Center"
-                Command="{Binding RefreshSkinsCommand}"
+                Command="{Binding RefreshSkinsClickedCommand}"
                 Content="Refresh" />
 
             <TextBlock
@@ -154,15 +153,14 @@
                 Content="..." />
 
             <TextBlock
-                Grid.Row="5"
+                Grid.Row="4"
                 Grid.Column="0"
                 VerticalAlignment="Center"
                 Text="Skin Type:" />
 
             <ComboBox
-                Grid.Row="5"
+                Grid.Row="4"
                 Grid.Column="1"
-                Grid.ColumnSpan="3"
                 MinWidth="121"
                 Margin="0,10"
                 HorizontalAlignment="Center"
@@ -170,15 +168,16 @@
                 SelectedItem="{Binding SelectedSkinTypeName}" />
 
             <TextBlock
-                Grid.Row="6"
-                Grid.Column="0"
+                Grid.Row="4"
+                Grid.Column="2"
                 VerticalAlignment="Center"
+                HorizontalAlignment="Right"
                 Text="Sub Type:" />
 
             <ComboBox
-                Grid.Row="6"
-                Grid.Column="1"
-                Grid.ColumnSpan="3"
+                Grid.Row="4"
+                Grid.Column="3"
+                VerticalAlignment="Center"
                 MinWidth="121"
                 Margin="0,0,0,0"
                 HorizontalAlignment="Center"
@@ -186,13 +185,13 @@
                 SelectedItem="{Binding SelectedSkinSubType}" />
 
             <TextBlock
-                Grid.Row="7"
+                Grid.Row="5"
                 Grid.Column="0"
                 VerticalAlignment="Center"
                 Text="Applied Skin:" />
 
             <TextBlock
-                Grid.Row="7"
+                Grid.Row="5"
                 Grid.Column="1"
                 Grid.ColumnSpan="3"
                 MinWidth="121"
@@ -200,40 +199,20 @@
                 HorizontalAlignment="Center"
                 Text="{Binding AppliedSkinName}" />
             
-            <Image
-                Grid.Row="8"
-                Grid.Column="0"
-                MinHeight="150"
-                MaxWidth="110"
-                Margin="0,0. 2, 0"
-                Source="{Binding Screenshot1}"
-                Stretch="UniformToFill" />
-
-            
-
             <ListBox
-                Grid.Row="8"
-                Grid.Column="1"
-                Grid.ColumnSpan="3"
+                Grid.Row="6"
+                Grid.Column="2"
+                Grid.ColumnSpan="2"
                 MinWidth="200"
                 MaxHeight="145"
-                HorizontalAlignment="Center"
+                HorizontalAlignment="Right"
                 ItemsSource="{Binding AvailableSkinNames}"
                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
                 ScrollViewer.VerticalScrollBarVisibility="Auto"
                 SelectedItem="{Binding SelectedSkinName}" />
             
-            <Image
-                Grid.Row="8"
-                Grid.Column="4"
-                MinWidth="100"
-                MinHeight="150"
-                MaxWidth="110"
-                Source="{Binding Screenshot2}"
-                Stretch="UniformToFill" />
-
             <Button
-                Grid.Row="9"
+                Grid.Row="7"
                 Grid.Column="1"
                 Grid.ColumnSpan="3"
                 Margin="0,2,0,0"
@@ -242,17 +221,26 @@
                 Content="Apply Skin" />
 
             <Button
-                Grid.Row="9"
+                Grid.Row="7"
                 Grid.Column="0"
                 Command="{Binding RestoreCommand}"
                 IsVisible="{Binding ShowRestore}"
                 Content="Restore" />
 
             <Button
-                Grid.Row="9"
+                Grid.Row="7"
                 Grid.Column="4"
                 Command="{Binding StartGameCommand}"
                 Content="Start Game" />
+            
+            <TextBlock Grid.ColumnSpan="5" Grid.Column="0" Grid.Row="8" Text="Screenshots Will Show Below" HorizontalAlignment="Center"/>
+                
+            <Image
+                Grid.Row="9"
+                Grid.Column="0"
+                Grid.ColumnSpan="5"
+                Margin="0,0. 2, 0"
+                Source="{Binding Screenshot}" />
 
         </Grid>
 
