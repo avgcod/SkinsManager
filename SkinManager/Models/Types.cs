@@ -13,7 +13,7 @@ public sealed record GameInfo(
 
 public sealed record Locations(string GameInfoFile, string AppliedSkinsFile, string CachedSkinsFile);
 
-public sealed record WebSkin(string SkinName, string SkinType, string SkinSubType, string Address, string Author, ImmutableList<string> DowloadLinks, ImmutableList<string> ScreenshotLinks){
+public sealed record WebSkin(string SkinName, string SkinType, string SkinSubType, string Address, string Author, ImmutableList<string> DownloadLinks, ImmutableList<string> ScreenshotLinks){
     public string Description => $"{SkinType} {SkinSubType} skin {SkinName}.";
 }
 

@@ -75,7 +75,7 @@ public class SkinsAccessService{
     public async Task<string> DownloadSkin(HttpClient httpClient, string skinName, int downloadLinkNumber){
         try{
             WebSkin skinToDownload = _gameSkins.Lefts().First(x => x.SkinName == skinName);
-            string downloadLink = skinToDownload.DowloadLinks[downloadLinkNumber-1];
+            string downloadLink = skinToDownload.DownloadLinks[downloadLinkNumber-1];
             HttpResponseMessage response =
                 await httpClient.GetAsync(downloadLink);
 
@@ -250,12 +250,12 @@ public class SkinsAccessService{
             });
         }
         
-        if (await FileAccessService.LoadJsonToObject<AddressBook>(nameof(SkinsSource.Ephinea) + "AddressBook.json") is not{ } addessBookResult){
+        if (await FileAccessService.LoadJsonToObject<AddressBook>(nameof(SkinsSource.Ephinea) + "AddressBook.json") is not{ } addressBookResult){
             /*theMessenger.Send(new FatalErrorMessage("IO Exception",
                 $"Unable to find the {nameof(SkinsSource.Ephinea) + "AddressBook.json"} file."));*/
         }
         else{
-            addessBookResult.IfSucc(possibleAddressBook => {
+            addressBookResult.IfSucc(possibleAddressBook => {
                 possibleAddressBook.IfSome(theAddressBook => {
                     _addressBooks = _addressBooks.Add(SkinsSource.Ephinea,theAddressBook);
                 });

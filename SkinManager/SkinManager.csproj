@@ -33,9 +33,6 @@
 
 
   <ItemGroup>
-    <None Update="GameInfo.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="CachedSkins.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
