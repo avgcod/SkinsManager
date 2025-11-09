@@ -3,15 +3,12 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Timers;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -29,7 +26,6 @@ public partial class MainWindowViewModel : ViewModelBase{
     private readonly Locations _locations;
     private bool _cleanShutdown = true;
     private bool _applyNoBackup = false;
-    private readonly Timer _screenshotTimer;
     #endregion
 
     #region Collections
@@ -59,9 +55,8 @@ public partial class MainWindowViewModel : ViewModelBase{
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(RestoreCommand))]
     private string _appliedSkinName = string.Empty;
 
-    [ObservableProperty] private Bitmap _screenshot = new RenderTargetBitmap(new PixelSize(1, 1));
 
-    private List<Bitmap> Screenshots{ get; set; } = [];
+    [ObservableProperty] private List<Bitmap> _screenshots = [];
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ApplySkinCommand))]
@@ -93,16 +88,6 @@ public partial class MainWindowViewModel : ViewModelBase{
 
         _currentWindow.Closing += OnWindowClosing;
         _currentWindow.Loaded += WindowLoaded;
-
-        _screenshotTimer = new Timer();
-        _screenshotTimer.Interval = TimeSpan.FromSeconds(3).TotalMilliseconds;
-        _screenshotTimer.AutoReset = true;
-        _screenshotTimer.Elapsed += ScreenshotTimerOnElapsed;
-    }
-
-    private void ScreenshotTimerOnElapsed(object? sender, ElapsedEventArgs e){
-        int index = Screenshots.FindIndex(currentScreenshot => currentScreenshot == Screenshot);
-        Screenshot = index == Screenshots.Count - 1 ? Screenshots[0] : Screenshots[++index];
     }
     private async void WindowLoaded(object? sender, RoutedEventArgs e){
         await _skinsAccessService.LoadInformation(_locations);
@@ -134,7 +119,6 @@ public partial class MainWindowViewModel : ViewModelBase{
         _skinsAccessService.SetSkinsSource(SelectedSource);
     }
     partial void OnSelectedSkinTypeNameChanged(string value){
-        ResetScreenShot();
         RefreshSkinSubTypeNames();
 
         if (SkinSubTypes.Any()){
@@ -143,7 +127,6 @@ public partial class MainWindowViewModel : ViewModelBase{
         }
     }
     async partial void OnSelectedSkinSubTypeChanged(string value){
-        ResetScreenShot();
         if (string.IsNullOrEmpty(SelectedSkinSubType)){
             SelectedSkinSubType = string.Empty;
         }
@@ -157,7 +140,6 @@ public partial class MainWindowViewModel : ViewModelBase{
         AppliedSkinName = _skinsAccessService.GetAppliedSkinName(SelectedSkinTypeName, SelectedSkinSubType);
     }
     async partial void OnSelectedSkinNameChanged(string value){
-        ResetScreenShot();
         await SetScreenshots();
     }
     partial void OnSkinsLocationChanged(string value){
@@ -172,25 +154,25 @@ public partial class MainWindowViewModel : ViewModelBase{
     #endregion
         
     private async Task SetScreenshots(){
-        Screenshots.Clear();
+        Screenshots = [];
 
         if (string.IsNullOrEmpty(SelectedSkinName)){
             return;
         }
 
         ImmutableList<string> currentScreenshots = _skinsAccessService.GetSkinScreenshots(SelectedSkinName);
+        List<Bitmap> tempList = [];
 
         foreach (string screenshot in currentScreenshots){
-            Screenshots.Add(screenshot.Contains("http") switch{
+            tempList.Add(screenshot.Contains("http") switch{
                 true => await ImageHelperService.LoadFromWeb(new Uri(screenshot)) ?? new RenderTargetBitmap(new PixelSize(1, 1)),
                 _ => ImageHelperService.LoadFromResource(new Uri(screenshot))
             });
         }
-            
-        if(Screenshots.Any()) Screenshot = Screenshots.First();
-        if (Screenshots.Count > 1) _screenshotTimer.Start();
+        
+        Screenshots = tempList;
 
-        OnPropertyChanged(nameof(Screenshot));
+        OnPropertyChanged(nameof(Screenshots));
     }
     private void RefreshSkinTypeNames(){
         SkinTypeNames.Clear();
@@ -230,8 +212,8 @@ public partial class MainWindowViewModel : ViewModelBase{
     public bool CanStartGame => !string.IsNullOrEmpty(GameExecutableLocation) && !Busy;
     public bool CanRefreshSkins => !Busy;
     public bool CanBrowse => !Busy;
-    public bool CanApply => !string.IsNullOrEmpty(SelectedSkinName) && !Busy;
-    public bool CanRestore => !string.IsNullOrEmpty(AppliedSkinName) && !Busy;
+    public bool CanApply => !string.IsNullOrEmpty(SelectedSkinName) && !Busy && !string.IsNullOrWhiteSpace(SkinsLocation);
+    public bool CanRestore => !string.IsNullOrEmpty(AppliedSkinName) && !Busy && !string.IsNullOrWhiteSpace(SkinsLocation);
 
 
     [RelayCommand(CanExecute = nameof(CanApply))]
@@ -329,7 +311,6 @@ public partial class MainWindowViewModel : ViewModelBase{
 
     [RelayCommand(CanExecute = nameof(CanRefreshSkins))]
     private async Task OnRefreshSkinsClicked(){
-        ResetScreenShot();
         Busy = true;
 
         ProcessingText = "Refreshing skins. Please wait.";
@@ -378,9 +359,5 @@ public partial class MainWindowViewModel : ViewModelBase{
         ErrorMessageBoxView emboxView = new ErrorMessageBoxView();
         emboxView.DataContext = new ErrorMessageBoxViewModel(emboxView, errorType, errorText);
         await emboxView.ShowDialog(_currentWindow);
-    }
-    private void ResetScreenShot(){
-        _screenshotTimer.Stop();
-        Screenshot = new RenderTargetBitmap(new PixelSize(1, 1));
     }
 }

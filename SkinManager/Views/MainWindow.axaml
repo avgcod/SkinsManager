@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:converters="using:SkinManager.Converters"
+    xmlns:controls="using:SkinManager.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="using:SkinManager.ViewModels"
@@ -92,7 +93,7 @@
                 Grid.Row="1"
                 Grid.Column="1"
                 Grid.ColumnSpan="3"
-                MinWidth="150"
+                MinWidth="325"
                 IsEnabled="False"
                 IsReadOnly="True"
                 Text="{Binding SkinsLocation}" />
@@ -115,7 +116,7 @@
                 Grid.Row="2"
                 Grid.Column="1"
                 Grid.ColumnSpan="3"
-                MinWidth="150"
+                MinWidth="325"
                 Margin="0,5"
                 IsEnabled="False"
                 IsReadOnly="True"
@@ -140,7 +141,7 @@
                 Grid.Row="3"
                 Grid.Column="1"
                 Grid.ColumnSpan="3"
-                MinWidth="150"
+                MinWidth="325"
                 IsEnabled="False"
                 IsReadOnly="True"
                 Text="{Binding GameExecutableLocation}" />
@@ -201,11 +202,11 @@
             
             <ListBox
                 Grid.Row="6"
-                Grid.Column="2"
-                Grid.ColumnSpan="2"
-                MinWidth="200"
+                Grid.Column="0"
+                Grid.ColumnSpan="5"
+                MinWidth="325"
                 MaxHeight="145"
-                HorizontalAlignment="Right"
+                HorizontalAlignment="Center"
                 ItemsSource="{Binding AvailableSkinNames}"
                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
                 ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -235,12 +236,16 @@
             
             <TextBlock Grid.ColumnSpan="5" Grid.Column="0" Grid.Row="8" Text="Screenshots Will Show Below" HorizontalAlignment="Center"/>
                 
-            <Image
+            <!--<Image
                 Grid.Row="9"
                 Grid.Column="0"
                 Grid.ColumnSpan="5"
                 Margin="0,0. 2, 0"
-                Source="{Binding Screenshot}" />
+                Source="{Binding Screenshot}" />-->
+            
+            <controls:SlideshowControl Grid.Row="9"
+                                       Grid.Column="0"
+                                       Grid.ColumnSpan="5" TimerSeconds="3" Images="{Binding Screenshots}"/>
 
         </Grid>
 
