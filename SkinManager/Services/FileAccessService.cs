@@ -9,39 +9,45 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using LanguageExt;
+using SharpCompress.Common;
+using SharpCompress.Readers;
 using static LanguageExt.Prelude;
 
 namespace SkinManager.Services;
 
 public static class FileAccessService{
-    private static readonly JsonSerializerOptions Options = new JsonSerializerOptions(){ WriteIndented = true };
+    private static readonly JsonSerializerOptions Options = new(){ WriteIndented = true };
 
     public static async Task<Fin<bool>> ApplySkinAsync(string skinDirectoryName, string gameDirectoryName){
         try{
-            await Task.Run(() => {
-                foreach (DirectoryInfo folder in new DirectoryInfo(skinDirectoryName).GetDirectories("*.*",
-                             SearchOption.AllDirectories)){
-                    foreach (FileInfo theFile in folder.GetFiles()){
-                        string destinationPath = Path.Combine(gameDirectoryName, folder.Name, theFile.Name);
-                        File.Copy(theFile.FullName, destinationPath, true);
-                    }
+            foreach (DirectoryInfo currentFolder in new DirectoryInfo(skinDirectoryName).GetDirectories("*.*",
+                         SearchOption.AllDirectories).Where(theDirectory => theDirectory.Name != "Screenshots")){
+                string dirPath = string.Empty;
+                DirectoryInfo? enumeratingParent = currentFolder.Parent;
+                while (enumeratingParent is not null && enumeratingParent.FullName != skinDirectoryName){
+                    dirPath =  Path.Combine(dirPath,enumeratingParent.Name);
+                    enumeratingParent = enumeratingParent.Parent;
                 }
-            });
+                foreach (FileInfo theFile in currentFolder.GetFiles()){
+                    string destinationPath = Path.Combine(gameDirectoryName, dirPath,currentFolder.Name, theFile.Name);
+                    File.Copy(theFile.FullName, destinationPath, true);
+                }
+            }
 
             return true;
         }
         catch (Exception ex){
-            return Fin<bool>.Fail(ex);
+            return Fin.Fail<bool>(ex);
         }
     }
 
-    private static async Task<Fin<bool>> CreateFolderAsync(string directoryName){
-        if (!await DirectoryExists(directoryName).RunAsync()){
+    private static Fin<bool> CreateFolder(string directoryName){
+        if (!Directory.Exists(directoryName)){
             try{
-                await Task.Run(() => Directory.CreateDirectory(directoryName));
+                Directory.CreateDirectory(directoryName);
             }
             catch (Exception ex){
-                return Fin<bool>.Fail(ex);
+                return Fin.Fail<bool>(ex);
             }
         }
 
@@ -52,38 +58,41 @@ public static class FileAccessService{
         string gameDirectoryName){
         try{
             DirectoryInfo skinDirectory = new(skinDirectoryName);
-            DirectoryInfo[] subDirs =
-                await Task.Run(() => skinDirectory.GetDirectories("*.*", SearchOption.AllDirectories));
+            DirectoryInfo[] subDirs = skinDirectory.GetDirectories("*.*", SearchOption.AllDirectories);
 
-            await Task.Run(async () => {
-                foreach (DirectoryInfo currentFolder in subDirs){
-                    string newBackUpDirectoryName = Path.Combine(backUpDirectoryName, currentFolder.Name);
-                    if (await CreateFolderAsync(newBackUpDirectoryName)){
-                        foreach (FileInfo theFile in currentFolder.GetFiles()){
-                            string backupFileName = Path.Combine(newBackUpDirectoryName, theFile.Name);
-                            string originalFileName =
-                                Path.Combine(gameDirectoryName, currentFolder.Name, theFile.Name);
-                            if (File.Exists(originalFileName)){
-                                File.Copy(originalFileName, backupFileName, false);
-                            }
-                            else{
-                                FileStream originalFileStream = await FileExists("FilesToDelete.txt").RunAsync()
-                                    ? File.OpenWrite(originalFileName)
-                                    : File.Create(backupFileName);
+            foreach (DirectoryInfo currentFolder in subDirs.Where(theFolder => theFolder.Name != "Screenshots")){
+                string dirPath = string.Empty;
+                DirectoryInfo? enumeratingParent = currentFolder.Parent;
+                while (enumeratingParent is not null && enumeratingParent.Name != skinDirectory.Name){
+                    dirPath =  Path.Combine(dirPath,enumeratingParent.Name);
+                    enumeratingParent = enumeratingParent.Parent;
+                }
+                string newBackUpDirectoryName = Path.Combine(backUpDirectoryName, dirPath,currentFolder.Name);
+                if (CreateFolder(newBackUpDirectoryName)){
+                    foreach (FileInfo theFile in currentFolder.GetFiles()){
+                        string backupFileName = Path.Combine(newBackUpDirectoryName, theFile.Name);
+                        string originalFileName =
+                            Path.Combine(gameDirectoryName, dirPath, currentFolder.Name, theFile.Name);
+                        if (File.Exists(originalFileName) && !File.Exists(backupFileName)){
+                            File.Copy(originalFileName, backupFileName, false);
+                        }
+                        else{
+                            FileStream originalFileStream = File.Exists("FilesToDelete.txt")
+                                ? File.OpenWrite("FilesToDelete.txt")
+                                : File.Create("FilesToDelete.txt");
 
-                                await using StreamWriter writer = new StreamWriter(originalFileStream);
-                                await writer.WriteLineAsync(originalFileName);
-                                writer.Close();
-                            }
+                            await using StreamWriter writer = new StreamWriter(originalFileStream);
+                            await writer.WriteLineAsync(originalFileName);
+                            writer.Close();
                         }
                     }
                 }
-            });
+            }
 
             return true;
         }
         catch (Exception ex){
-            return Fin<bool>.Fail(ex);
+            return Fin.Fail<bool>(ex);
         }
     }
 
@@ -97,14 +106,14 @@ public static class FileAccessService{
                 foreach (DirectoryInfo currentFolder in subDirs){
                     foreach (FileInfo theFile in currentFolder.GetFiles()){
                         string gameFileName = Path.Combine(gameDirectoryName, currentFolder.Name, theFile.Name);
-                        if (await FileExists(gameFileName).RunAsync()){
+                        if (File.Exists(gameFileName)){
                             File.Copy(theFile.FullName, gameFileName, true);
                         }
                     }
                 }
 
                 string filesToDelete = "FilesToDelete.txt";
-                if (await FileExists(filesToDelete).RunAsync()){
+                if (File.Exists(filesToDelete)){
                     using StreamReader reader = new StreamReader(filesToDelete);
                     while (!reader.EndOfStream){
                         File.Delete((await reader.ReadLineAsync())!);
@@ -117,18 +126,12 @@ public static class FileAccessService{
             return true;
         }
         catch (Exception ex){
-            return Fin<bool>.Fail(ex);
+            return Fin.Fail<bool>(ex);
         }
     }
 
-    private static IO<bool> FileExists(string fileName) =>
-        liftIO(async () => await Task.Run(() => File.Exists(fileName)));
-
-    private static IO<bool> DirectoryExists(string directoryName) =>
-        liftIO(async () => await Task.Run(() => Directory.Exists(directoryName)));
-
-    public static async Task<Fin<bool>> StartGameAsync(string fileLocation){
-        if (await FileExists(fileLocation).RunAsync()){
+    public static Fin<bool> StartGame(string fileLocation){
+        if (File.Exists(fileLocation)){
             ProcessStartInfo psInfo = new(){
                 FileName = Path.Combine(fileLocation),
                 Verb = "runas",
@@ -136,64 +139,96 @@ public static class FileAccessService{
             };
 
             try{
-                await Task.Run(() => Process.Start(psInfo));
+                Process.Start(psInfo);
             }
             catch (Exception ex){
-                return Fin<bool>.Fail(ex);
+                return Fin.Fail<bool>(ex);
             }
+        }
+        else{
+            return Fin.Fail<bool>($"The {fileLocation} does not exist.");
         }
 
         return true;
     }
 
     public static async Task<Fin<bool>> ExtractSkinAsync(string archivePath, string destinationLocation){
-        if (await FileExists(archivePath).RunAsync()){
+        if (File.Exists(archivePath)){
             try{
-                Directory.CreateDirectory(destinationLocation);
-                await Task.Run(() => ZipFile.ExtractToDirectory(archivePath, destinationLocation));
+                if (!Directory.Exists(destinationLocation)) Directory.CreateDirectory(destinationLocation);
+                //await Task.Run(() => ZipFile.ExtractToDirectory(archivePath, destinationLocation));
+                await using (Stream stream = File.OpenRead(archivePath))
+                using (var reader = ReaderFactory.Open(stream)){
+                    reader.WriteAllToDirectory(
+                        destinationLocation,
+                        new ExtractionOptions(){ ExtractFullPath = true, Overwrite = true });
+                }
+
                 return true;
             }
             catch (Exception ex){
-                return Fin<bool>.Fail(ex);
+                return Fin.Fail<bool>(ex);
             }
         }
         else{
-            return Fin<bool>.Fail("The archive does not exist.");
+            return Fin.Fail<bool>($"The archive {archivePath} does not exist.");
         }
     }
 
-    public static async Task<Fin<Option<T>>> LoadJsonToObject<T>(string fileName){
+    public static async Task<Fin<T>> LoadJsonToObject<T>(string fileName){
         try{
-            if (await FileExists(fileName).RunAsync()){
+            if (File.Exists(fileName)){
                 await using Stream fileStream = File.OpenRead(fileName);
                 return await JsonSerializer.DeserializeAsync<T>(fileStream) switch{
-                    { } objectInfo => Option<T>.Some(objectInfo),
-                    _ => Option<T>.None
+                    { } objectInfo => objectInfo,
+                    _ => Fin.Fail<T>("There was an issue reading the file.")
                 };
             }
 
-            return Fin<Option<T>>.Fail("The file does not exist.");
+            return Fin.Fail<T>($"The {typeof(T)} file {fileName} does not exist.");
         }
         catch (Exception ex){
-            return Fin<Option<T>>.Fail(ex);
+            return Fin.Fail<T>(ex);
         }
     }
 
-    public static async Task<Fin<ImmutableList<T>>> LoadJsonToIEnumerable<T>(string fileName){
+    public static async Task<IEnumerable<Fin<T>>> LoadJsonsToObjects<T>(IEnumerable<string> fileNames){
+        List<Fin<T>> results = [];
+        foreach (var fileName in fileNames){
+            try{
+                if (File.Exists(fileName)){
+                    await using Stream fileStream = File.OpenRead(fileName);
+                    results.Add(await JsonSerializer.DeserializeAsync<T>(fileStream) switch{
+                        { } objectInfo => Fin.Succ<T>(objectInfo),
+                        _ => Fin.Fail<T>("There was an issue reading the file.")
+                    });
+                }
+
+                results.Add(Fin.Fail<T>($"The {typeof(T)} file {fileName} does not exist."));
+            }
+            catch (Exception ex){
+                results.Add(Fin.Fail<T>(ex));
+            }
+        }
+
+        return results;
+    }
+
+    public static async Task<Fin<ImmutableList<T>>> LoadJsonToImmutableList<T>(string fileName){
         try{
-            if (await FileExists(fileName).RunAsync()){
+            if (File.Exists(fileName)){
                 await using Stream fileStream = File.OpenRead(fileName);
                 return await JsonSerializer.DeserializeAsync<IEnumerable<T>>(fileStream) switch{
-                    { } collection => Fin<ImmutableList<T>>.Succ([..collection]),
-                    _ => Fin<ImmutableList<T>>.Succ([])
+                    { } collection => Fin.Succ<ImmutableList<T>>([..collection]),
+                    _ => Fin.Succ<ImmutableList<T>>([])
                 };
             }
             else{
-                return Fin<ImmutableList<T>>.Fail("The file does not exist.");
+                return Fin.Fail<ImmutableList<T>>($"The {typeof(T)} file {fileName} does not exist.");
             }
         }
         catch (Exception ex){
-            return Fin<ImmutableList<T>>.Fail(ex);
+            return Fin.Fail<ImmutableList<T>>(ex);
         }
     }
 
@@ -206,7 +241,7 @@ public static class FileAccessService{
             return true;
         }
         catch (Exception ex){
-            return Fin<bool>.Fail(ex);
+            return Fin.Fail<bool>(ex);
         }
     }
 
@@ -219,44 +254,35 @@ public static class FileAccessService{
             return true;
         }
         catch (Exception ex){
-            return Fin<bool>.Fail(ex);
+            return Fin.Fail<bool>(ex);
         }
     }
 
-    public static async Task<Fin<bool>> SaveScreenshotsAsync(string path, IEnumerable<string> screenshots){
-        int screenshotNumber = 1;
+    public static Fin<IEnumerable<string>> SaveScreenshots(string path, IEnumerable<(Bitmap Screenshot, string FileExtension)> screenshots){
         try{
-            Directory.CreateDirectory(path);
-            foreach (var screenshot in screenshots){
-                Option<Bitmap> possibleScreenShotBitmap = screenshot.Contains("http") switch{
-                    true => await ImageHelperService.LoadFromWeb(new Uri(screenshot)) is {} screenshotBitmap ? Option<Bitmap>.Some(screenshotBitmap) : Option<Bitmap>.None,
-                    _ => Option<Bitmap>.Some(ImageHelperService.LoadFromResource(new Uri(screenshot)))
-                };
-
-                    possibleScreenShotBitmap.IfSome(screenshotBitmap => screenshotBitmap.Save(Path.Combine(path, $"Screenshot {screenshotNumber}.{
-                        screenshot.Split(".").Last()}")));
-
-                screenshotNumber++;
-            }
-
-            return true;
+            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+            
+            return screenshots.Aggregate(new List<string>(), (currentScreenshotLinks, currentScreenshot) => {
+                string newPath = Path.Combine(path, $"Screenshot {currentScreenshotLinks.Count + 1}{currentScreenshot.FileExtension}");
+                currentScreenshot.Screenshot.Save(newPath);
+                return [..currentScreenshotLinks, newPath];
+            });
         }
         catch (Exception ex){
-            return Fin<bool>.Fail(ex);
+            return Fin.Fail<IEnumerable<string>>(ex);
         }
     }
 
-    public static async Task<Fin<bool>> FolderHasFilesAsync(string folderPath){
-        if (await DirectoryExists(folderPath).RunAsync()){
+    public static Fin<bool> FolderHasFiles(string folderPath){
+        if (Directory.Exists(folderPath)){
             try{
-                return await Task.Run(() =>
-                    new DirectoryInfo(folderPath).EnumerateFiles(".", SearchOption.AllDirectories).Any());
+                return new DirectoryInfo(folderPath).EnumerateFiles(".", SearchOption.AllDirectories).Any();
             }
             catch (Exception ex){
-                return Fin<bool>.Fail(ex);
+                return Fin.Fail<bool>(ex);
             }
         }
 
-        return Fin<bool>.Fail("Folder does not exist.");
+        return Fin.Fail<bool>("Folder does not exist.");
     }
 }

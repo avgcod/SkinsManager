@@ -116,7 +116,7 @@ public static class UniversePsWebAccessService
         return skinTypeAddresses;
     }
 
-    public static async Task<ImmutableList<WebSkin>> GetAvailableSkinsAsync(HttpClient httpClient)
+    public static async Task<IEnumerable<WebSkin>> GetAvailableSkinsAsync(HttpClient httpClient)
     {
         List<WebSkin> skins = [];
 
@@ -128,7 +128,7 @@ public static class UniversePsWebAccessService
         return skins.ToImmutableList();
     }
 
-    private static async Task<ImmutableList<WebSkin>> GetSkinsFromWebsite(HttpClient httpClient, string skinType, string skinSubType, string address)
+    private static async Task<IEnumerable<WebSkin>> GetSkinsFromWebsite(HttpClient httpClient, string skinType, string skinSubType, string address)
     {
         string response = await httpClient.GetStringAsync(BaseSiteAddress + address);
 
@@ -209,14 +209,14 @@ public static class UniversePsWebAccessService
                     WebSkin tempSkin = new
                     (
                         currentSkinName, skinType, currentSkinSubType, address, currentAuthor, [currentSkinDownloadLink],
-                        currenSkinScreenshots.ToImmutableList()
+                        currenSkinScreenshots.ToImmutableList(), SkinsSource.UniversPS
                     );
                     foundSkins.Add(tempSkin);
                 }
             }
         }
 
-        return foundSkins.ToImmutableList();
+        return foundSkins;
     }
 
     private static string GetSkinSubType(string skinType, string skinName){

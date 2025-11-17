@@ -1,5 +1,6 @@
 {
   "Main" : "https://wiki.pioneer2.net/w/Skin:Main_Page",
   "Base" : "https://wiki.pioneer2.net",
-  "BaseScreenshots" : "https://wiki.pioneer2.net"
+  "BaseScreenshots" : "https://wiki.pioneer2.net",
+  "Source" : 0
 }

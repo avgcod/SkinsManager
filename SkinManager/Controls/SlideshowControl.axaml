@@ -6,12 +6,12 @@
              x:Class="SkinManager.Controls.SlideshowControl"
              Name="SlideshowControl1">
     <Grid ColumnDefinitions="Auto, *, Auto" RowDefinitions="*,Auto">
-        <Button Grid.Column="0" IsVisible="{Binding #SlideshowControl1.HasMultipleImages}" FontSize="20" Command="{Binding #SlideshowControl1.BackCommand}">&lt;-</Button>
-        <Image
+        <Button Grid.Row="0" Grid.Column="0" IsVisible="{Binding #SlideshowControl1.HasMultipleImages}" FontSize="20" Command="{Binding #SlideshowControl1.ChangeImageCommand}" CommandParameter="false">&lt;-</Button>
+        <Image Grid.Row="0"
                   Grid.Column="1"
                   Margin="2,0"
                   Source="{Binding #SlideshowControl1.CurrentImage}" />
-        <Button Grid.Column="2" IsVisible="{Binding #SlideshowControl1.HasMultipleImages}" FontSize="20" Command="{Binding #SlideshowControl1.ForwardCommand}">-&gt;</Button>
+        <Button Grid.Row="0" Grid.Column="2" IsVisible="{Binding #SlideshowControl1.HasMultipleImages}" FontSize="20" Command="{Binding #SlideshowControl1.ChangeImageCommand}" CommandParameter="true">-&gt;</Button>
         <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Center" Text="{Binding #SlideshowControl1.ImageProgress}"/>
     </Grid>
 </UserControl>

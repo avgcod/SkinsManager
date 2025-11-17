@@ -8,9 +8,5 @@ namespace SkinManager.Views
         {
             InitializeComponent();
         }
-
-        private void Binding(object? sender, Avalonia.Controls.SelectionChangedEventArgs e)
-        {
-        }
     }
 }

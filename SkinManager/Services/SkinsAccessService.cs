@@ -1,4 +1,4 @@
-﻿using SkinManager.Types;
+﻿/*using SkinManager.Types;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using LanguageExt;
+using SkinManager.Extensions;
 
 namespace SkinManager.Services;
 
@@ -17,15 +18,15 @@ public class SkinsAccessService{
     private SkinsSource _skinsSource = SkinsSource.Ephinea;
     private ImmutableDictionary<SkinsSource, AddressBook> _addressBooks = ImmutableDictionary<SkinsSource, AddressBook>.Empty;
 
-    private void AddAppliedSkin(string appliedSkinName){
+    private ImmutableDictionary<(string, string), LocalSkin> AddAppliedSkin(string appliedSkinName){
         LocalSkin appliedSkin = _gameSkins.Rights().First(x => x.SkinName == appliedSkinName);
-            _appliedSkins = _appliedSkins.Remove((appliedSkin.SkinType, appliedSkin.SkinSubType));
-            _appliedSkins = _appliedSkins.Add((appliedSkin.SkinType, appliedSkin.SkinSubType), appliedSkin);
+            return _appliedSkins
+                .Remove((appliedSkin.SkinType, appliedSkin.SkinSubType))
+                .Add((appliedSkin.SkinType, appliedSkin.SkinSubType), appliedSkin);
         
     }
-
-    private void RemoveAppliedSkin(LocalSkin appliedSkin){
-        _appliedSkins = _appliedSkins.Remove((appliedSkin.SkinType, appliedSkin.SkinSubType));
+    private ImmutableDictionary<(string, string), LocalSkin> RemoveAppliedSkin(LocalSkin appliedSkin){
+        return _appliedSkins.Remove((appliedSkin.SkinType, appliedSkin.SkinSubType));
     }
     public async Task RefreshSkins(bool includeWeb){
         await RefreshLocalSkins();
@@ -95,13 +96,9 @@ public class SkinsAccessService{
             return string.Empty;
         }
     }
-    private void ChangeWebSkinToLocalSkin(string skinName, string newLocalSkinPath){
+    private ImmutableList<Either<WebSkin, LocalSkin>> ChangeWebSkinToLocalSkin(string skinName, string newLocalSkinPath){
         WebSkin currentSkin = _gameSkins.Lefts().First(x => x.SkinName == skinName);
-        _gameSkins = _gameSkins.Remove(currentSkin);
-
-        LocalSkin newLocalSkin = new(currentSkin.SkinName, currentSkin.SkinType, currentSkin.SkinSubType, newLocalSkinPath, currentSkin.Author, currentSkin.ScreenshotLinks);
-
-        _gameSkins = _gameSkins.Add(newLocalSkin);
+        return _gameSkins.Remove(currentSkin).Add(currentSkin.ToLocalSkin(newLocalSkinPath));
     }
     private void UpdateSkins(IEnumerable<LocalSkin> skins){
         if (_gameSkins.Count == 0){
@@ -131,7 +128,7 @@ public class SkinsAccessService{
         string skinDirectory = _gameSkins.Rights().First(x => x.SkinName == skinName).SkinLocation;
         string gameDirectory = _psoGame.GameLocation;
         if (await FileAccessService.ApplySkinAsync(skinDirectory, gameDirectory)){
-            AddAppliedSkin(skinName);
+            _appliedSkins = AddAppliedSkin(skinName);
             return true;
         }
 
@@ -147,7 +144,7 @@ public class SkinsAccessService{
         LocalSkin selectedSkin = _gameSkins.Rights().First(x => x.SkinName == skinName);
 
         if (await FileAccessService.RestoreBackupAsync(selectedSkin.SkinLocation, _psoGame.GameLocation)){
-            RemoveAppliedSkin(selectedSkin);
+            _appliedSkins = RemoveAppliedSkin(selectedSkin);
             return true;
         }
         else{
@@ -219,7 +216,7 @@ public class SkinsAccessService{
                 skinToDownload.SkinSubType, skinToDownload.SkinName);
 
             if (await FileAccessService.ExtractSkinAsync(archivePath, newSkinPath)){
-                ChangeWebSkinToLocalSkin(skinToDownload.SkinName, newSkinPath);
+                _gameSkins = ChangeWebSkinToLocalSkin(skinToDownload.SkinName, newSkinPath);
                 return true;
             }
         }
@@ -232,7 +229,8 @@ public class SkinsAccessService{
         if (theSkin.ScreenshotFileNames.Any()){
             string screenshotsPath = Path.Combine(_psoGame.SkinsLocation, theSkin.SkinType,
                 theSkin.SkinSubType, theSkin.SkinName, "Screenshots");
-            return await FileAccessService.SaveScreenshotsAsync(screenshotsPath, theSkin.ScreenshotFileNames);
+            //return await FileAccessService.SaveScreenshotsAsync(screenshotsPath, theSkin.ScreenshotFileNames);
+            return true;
         }
 
         return false;
@@ -240,7 +238,7 @@ public class SkinsAccessService{
     public async Task LoadInformation(Locations locations){
         if (await FileAccessService.LoadJsonToObject<GameInfo>(nameof(GameInfo) + ".json") is not{ } gameInfoResult){
             /*theMessenger.Send(new FatalErrorMessage("IO Exception",
-                $"Unable to find the {locations.GameInfoFile} file."));*/
+                $"Unable to find the {locations.GameInfoFile} file."));#1#
         }
         else{
             gameInfoResult.IfSucc(possibleGameInfo => {
@@ -252,7 +250,7 @@ public class SkinsAccessService{
         
         if (await FileAccessService.LoadJsonToObject<AddressBook>(nameof(SkinsSource.Ephinea) + "AddressBook.json") is not{ } addressBookResult){
             /*theMessenger.Send(new FatalErrorMessage("IO Exception",
-                $"Unable to find the {nameof(SkinsSource.Ephinea) + "AddressBook.json"} file."));*/
+                $"Unable to find the {nameof(SkinsSource.Ephinea) + "AddressBook.json"} file."));#1#
         }
         else{
             addressBookResult.IfSucc(possibleAddressBook => {
@@ -262,14 +260,12 @@ public class SkinsAccessService{
             });
         }
 
-        (await FileAccessService.LoadJsonToIEnumerable<WebSkin>("CachedSkins.json")).IfSucc(UpdateSkins);
-        (await FileAccessService.LoadJsonToIEnumerable<LocalSkin>("AppliedSkins.json")).IfSucc(UpdateAppliedSkins);
+        (await FileAccessService.LoadJsonToImmutableList<WebSkin>("CachedSkins.json")).IfSucc(UpdateSkins);
+        (await FileAccessService.LoadJsonToImmutableList<LocalSkin>("AppliedSkins.json")).IfSucc(appliedSkins => _appliedSkins = UpdateAppliedSkins(appliedSkins));
     }
-    private void UpdateAppliedSkins(IEnumerable<LocalSkin> appliedSkins){
-        foreach (LocalSkin currentSkin in appliedSkins){
-            _appliedSkins = _appliedSkins.Add((currentSkin.SkinType, currentSkin.SkinSubType), currentSkin);
-        }
-    }
+    private ImmutableDictionary<(string, string), LocalSkin> UpdateAppliedSkins(IEnumerable<LocalSkin> appliedSkins)
+        => _appliedSkins.AddRange(appliedSkins.Select(currentSkin => new KeyValuePair<(string, string), LocalSkin>((currentSkin.SkinType, currentSkin.SkinSubType), currentSkin)));
+    
     public async Task SaveInformation(Locations locations){
         List<Task> tasks =[
             FileAccessService.SaveObjectToJson(_psoGame, locations.GameInfoFile),
@@ -290,4 +286,4 @@ public class SkinsAccessService{
     public void SetGameExecutableLocation(string gameExecutableLocation){
         _psoGame = _psoGame with{ GameExecutable = gameExecutableLocation };
     }
-}
+}*/

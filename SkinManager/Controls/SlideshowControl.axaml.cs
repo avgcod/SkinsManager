@@ -12,12 +12,10 @@ using CommunityToolkit.Mvvm.Input;
 namespace SkinManager.Controls;
 
 public partial class SlideshowControl : UserControl{
-    private static readonly Random RanRoller = new();
     private static readonly Timer SlideShowTimer = new();
     private int _currentImageIndex = -1;
     
-    public ICommand BackCommand { get; private set; }
-    public ICommand ForwardCommand { get; private set; }
+    public ICommand ChangeImageCommand { get; private set; }
     
     public static readonly StyledProperty<List<Bitmap>> ImagesProperty =
         AvaloniaProperty.Register<SlideshowControl, List<Bitmap>>(nameof(Images), defaultValue: []);
@@ -62,23 +60,20 @@ public partial class SlideshowControl : UserControl{
     public SlideshowControl(){
         SlideShowTimer.Interval = TimerSeconds;
         SlideShowTimer.Elapsed += SlideShowTimerOnElapsed;
-        BackCommand = new RelayCommand(GoToPreviousImageCommand);
-        ForwardCommand = new RelayCommand(GoToNextImageCommand);
+        ChangeImageCommand = new RelayCommand<object?>(ChangeImageHandler);
         InitializeComponent();
     }
 
-    private void GoToPreviousImageCommand(){
-        ChangeImage(false);
-        ResetTimer();
-    }
-    
-    private void GoToNextImageCommand(){
-        ChangeImage(true);
-        ResetTimer();
+    private void ChangeImageHandler(object? possibleStringObject){
+        if (possibleStringObject is string boolString && bool.TryParse(boolString, out bool goForward)){
+            CurrentImage = ChangeImage(goForward);
+            ImageProgress = GetProgressText();
+            ResetTimer();
+        }
     }
 
     private void SlideShowTimerOnElapsed(object? sender, ElapsedEventArgs e){
-        ChangeImage(true);
+        CurrentImage = ChangeImage(true);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change){
@@ -87,8 +82,11 @@ public partial class SlideshowControl : UserControl{
             _currentImageIndex = -1;
             ImageProgress = string.Empty;
             CurrentImage = new RenderTargetBitmap(new PixelSize(1, 1));
-            
-            if(Images.Any()) ChangeImage(true);
+
+            if (Images.Any()){
+                CurrentImage = ChangeImage(true);
+                ImageProgress = GetProgressText();
+            }
             
             if (Images.Count > 1){
                 HasMultipleImages = true;
@@ -104,19 +102,19 @@ public partial class SlideshowControl : UserControl{
         base.OnPropertyChanged(change);
     }
     
-    private void ResetTimer(){
+    private static void ResetTimer(){
         if (SlideShowTimer.Enabled){
             SlideShowTimer.Stop();
             SlideShowTimer.Start();
         }
     }
 
-    private void ChangeImage(bool goingForward){
+    private Bitmap ChangeImage(bool goingForward){
         if (goingForward) _currentImageIndex = _currentImageIndex == Images.Count - 1 ? 0 : ++_currentImageIndex;
         else _currentImageIndex = _currentImageIndex == 0 ? Images.Count - 1 : --_currentImageIndex;
         
-        CurrentImage = Images[_currentImageIndex];
-        ImageProgress = $"Image {_currentImageIndex + 1} of {Images.Count}";
+        return Images[_currentImageIndex];
     }
     
+    private string GetProgressText() => $"Image {_currentImageIndex + 1} of {Images.Count}";
 }

@@ -5,28 +5,25 @@ using Avalonia.Markup.Xaml;
 using SkinManager.ViewModels;
 using SkinManager.Views;
 
-namespace SkinManager{
-    public partial class App : Application{
-        //private const string _gameInfoFile = "GameInfo.json";
-        //private const string _appliedSkinsFile = "AppliedSkins.json";
-        //private const string _knownGamesFile = "KnownGames.json";
+namespace SkinManager;
 
-        public override void Initialize(){
-            AvaloniaXamlLoader.Load(this);
+public partial class App : Application{
+
+    public override void Initialize(){
+        AvaloniaXamlLoader.Load(this);
+    }
+
+    public override void OnFrameworkInitializationCompleted(){
+
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop){
+            // Line below is needed to remove Avalonia data validation.
+            // Without this line you will get duplicate validations from both Avalonia and CT
+            BindingPlugins.DataValidators.RemoveAt(0);
+
+            desktop.MainWindow = new MainWindow();
+            desktop.MainWindow.DataContext = new MainWindowViewModel((MainWindow)desktop.MainWindow, "appsettings.json");
         }
 
-        public override void OnFrameworkInitializationCompleted(){
-
-            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop){
-                // Line below is needed to remove Avalonia data validation.
-                // Without this line you will get duplicate validations from both Avalonia and CT
-                BindingPlugins.DataValidators.RemoveAt(0);
-
-                desktop.MainWindow = new MainWindow();
-                desktop.MainWindow.DataContext = new MainWindowViewModel((MainWindow)desktop.MainWindow);
-            }
-
-            base.OnFrameworkInitializationCompleted();
-        }
+        base.OnFrameworkInitializationCompleted();
     }
 }

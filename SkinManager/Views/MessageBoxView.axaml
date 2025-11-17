@@ -6,12 +6,11 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="using:SkinManager.ViewModels"
     Title="Notice"
-    Width="180"
-    Height="70"
-    MinWidth="180"
-    MinHeight="70"
+    Width="200"
+    Height="150"
+    MinWidth="200"
+    MinHeight="150"
     x:DataType="vm:MessageBoxViewModel"
-    SystemDecorations="BorderOnly"
     WindowStartupLocation="CenterOwner"
     mc:Ignorable="d">
 
@@ -20,7 +19,9 @@
         Orientation="Vertical"
         Spacing="10">
 
-        <TextBlock HorizontalAlignment="Center" Text="{Binding MessageText}" />
+        <ScrollViewer HorizontalScrollBarVisibility="Auto">
+            <TextBlock HorizontalAlignment="Center" Text="{Binding MessageText}" />
+        </ScrollViewer>
 
         <Button
             x:Name="btnOk"

@@ -10,12 +10,17 @@ namespace SkinManager.Services
     //Copied from https://docs.avaloniaui.net/ru/docs/guides/data-binding/how-to-bind-image-files
     public static class ImageHelperService
     {
-        public static Bitmap LoadFromResource(Uri resourceUri)
-        {
-            return new Bitmap(AssetLoader.Open(resourceUri));
+        public static Bitmap LoadFromResource(string filePath){
+            try{
+                return new Bitmap(File.OpenRead(filePath));
+            }
+            catch (Exception ex){
+                Console.WriteLine($"An error occurred while trying to load image '{filePath}' : {ex.Message}");
+                return null;
+            }
+            
+            //return new Bitmap(AssetLoader.Open(resourceUri));
         }
-
-        //TODO: Send the error information through the messenger.
         public static async Task<Bitmap?> LoadFromWeb(Uri url)
         {
             using var httpClient = new HttpClient();

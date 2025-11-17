@@ -11,7 +11,7 @@ using SkinManager.Types;
 namespace SkinManager.Services;
 
 public static class EphineaService{
-    public static async Task<ImmutableList<SkinTypeSiteInformation>> GetAvailableSkinTypes(HttpClient theClient,
+    public static async Task<IEnumerable<SkinTypeSiteInformation>> GetAvailableSkinTypes(HttpClient theClient,
         string skinTypesAddress, string baseSkinAddress){
         string mainPageResponse = await theClient.GetStringAsync(skinTypesAddress);
 
@@ -28,18 +28,17 @@ public static class EphineaService{
             mainPageDoc.DocumentNode.SelectNodes(
                 "//ul/li/a[contains(@href,'/w/Skin:') and contains(@title,'Skin:')]") ?? Enumerable.Empty<HtmlNode>();
 
-        var foundCategories = skinCategoryNodes
+        return skinCategoryNodes
             .Select(currentCategoryNode => new SkinTypeSiteInformation(currentCategoryNode.InnerText,
                 string.Concat(baseSkinAddress, currentCategoryNode.GetAttributeValue("href", string.Empty))))
             .Where(result => result.Name != string.Empty)
             .Select(result => result with{
                 Name = result.Name.Replace("\n", string.Empty).NormalizeWhiteSpace().ToTitleCase()
-            }).ToImmutableList();
+            });
 
-        return foundCategories;
     }
 
-    public static async Task<ImmutableList<SkinSiteInformation>> GetAvailableSkins(HttpClient theClient,
+    public static async Task<IEnumerable<SkinSiteInformation>> GetAvailableSkins(HttpClient theClient,
         string baseAddress, string skinTypeAddress, string currentType){
         string mainPageResponse = await theClient.GetStringAsync(skinTypeAddress);
 
@@ -61,17 +60,15 @@ public static class EphineaService{
         string currentSkinAddress = string.Empty;
         List<SkinSiteInformation> availableSkins = [];
 
-        foreach (var skinTableNode in skinTableNodes){
-            currentSkinName = skinTableNode.SelectSingleNode(".//td[@style='width:300px;']/a").InnerText;
-            currentSkinSubTypeName = skinTableNode.SelectNodes("preceding-sibling::h3/span")?.Last().InnerText ?? "Not Specified";
+        return skinTableNodes.Select(currentSkinTableNode => {
+            currentSkinName = currentSkinTableNode.SelectSingleNode(".//td[@style='width:300px;']/a").InnerText;
+            currentSkinSubTypeName = currentSkinTableNode.SelectNodes("preceding-sibling::h3/span")?.Last().InnerText ?? "Not Specified";
             currentSkinAddress = string.Concat(baseAddress,
-                skinTableNode.SelectSingleNode(".//td/a[contains(@href,'/w/Skin:') and contains(@title,'Skin:')]")
+                currentSkinTableNode.SelectSingleNode(".//td/a[contains(@href,'/w/Skin:') and contains(@title,'Skin:')]")
                     .GetAttributeValue("href", string.Empty));
-            availableSkins.Add(new SkinSiteInformation(currentType, currentSkinSubTypeName, currentSkinName,
-                currentSkinAddress));
-        }
-
-        return availableSkins.ToImmutableList();
+            return new SkinSiteInformation(currentType, currentSkinSubTypeName, currentSkinName,
+                currentSkinAddress);
+        });
     }
 
     public static async Task<WebSkin> GetSkin(HttpClient theClient, string skinAddress, string baseScreenshotsAddress,
@@ -109,7 +106,7 @@ public static class EphineaService{
             WebSkin newSkin = new
             (
                 skinName, skinType, skinSubType, skinAddress, currentAuthor, currentDownloadLinks,
-                currentScreenshots
+                currentScreenshots, SkinsSource.Ephinea
             );
 
             return newSkin;
@@ -118,7 +115,7 @@ public static class EphineaService{
             WebSkin newSkin = new
             (
                 skinName, skinType, skinSubType, skinAddress, currentAuthor, currentDownloadLinks,
-                []
+                [], SkinsSource.Ephinea
             );
 
             return newSkin;
