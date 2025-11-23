@@ -67,7 +67,7 @@ public partial class MainWindowViewModel : ViewModelBase{
 
     [ObservableProperty] private string _gameLocation = string.Empty;
     [ObservableProperty] private bool _isEphinea = true;
-    [ObservableProperty] private bool _includeWeb = false;
+    [ObservableProperty] private bool _includeWeb = true;
     [ObservableProperty] private bool _showRestore = false;
 
     [ObservableProperty] private SkinsSource _selectedSource;
@@ -345,13 +345,12 @@ public partial class MainWindowViewModel : ViewModelBase{
 
         LocalSkinsAccessService.GetAvailableSkinsAsync(_gameInfo.SkinsLocation).IfSucc(async localSkins => {
             _skinsState = _skinsState.ReplaceLocalSkins(localSkins);
-
-            if (IncludeWeb){
-                var newWebSkins = await WebAccessService.GetWebSkins(new HttpClient(),
-                    _skinsState.AddressBooks.First(currentBook => currentBook.Source == SelectedSource));
-                _skinsState = _skinsState.ReplaceWebSkins(newWebSkins);
-            }
         });
+        
+        if (IncludeWeb){
+            var newWebSkins = await WebAccessService.GetWebSkins(new HttpClient(), _skinsState.AddressBooks);
+            _skinsState = _skinsState.ReplaceWebSkins(newWebSkins);
+        }
 
         RefreshSkins();
 

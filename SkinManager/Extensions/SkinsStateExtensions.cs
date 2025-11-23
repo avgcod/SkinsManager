@@ -1,10 +1,10 @@
+using System;
 using SkinManager.Types;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using LanguageExt;
-using LanguageExt.Traits;
 
 namespace SkinManager.Extensions;
 
@@ -92,11 +92,11 @@ public static class SkinsStateExtensions{
 
     public static IEnumerable<Skin> SearchForSkins(this SkinsState currentState, string searchText) =>
         currentState.WebSkins.Where(currentWebSkin
-                => currentWebSkin.SkinName.Contains(searchText) || currentWebSkin.SkinType.Contains(searchText) ||
-                   currentWebSkin.SkinSubType.Contains(searchText))
+                => currentWebSkin.SkinName.Contains(searchText, StringComparison.OrdinalIgnoreCase) || currentWebSkin.SkinType.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                   currentWebSkin.SkinSubType.Contains(searchText, StringComparison.OrdinalIgnoreCase))
             .Concat<Skin>(currentState.LocalSkins.Where(currentLocalSkin
-                => currentLocalSkin.SkinName.Contains(searchText) || currentLocalSkin.SkinType.Contains(searchText) ||
-                   currentLocalSkin.SkinSubType.Contains(searchText)));
+                => currentLocalSkin.SkinName.Contains(searchText, StringComparison.OrdinalIgnoreCase) || currentLocalSkin.SkinType.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                   currentLocalSkin.SkinSubType.Contains(searchText, StringComparison.OrdinalIgnoreCase)));
 
     public static IEnumerable<string> GetSkinTypes(this SkinsState currentState) 
         => currentState.WebSkins.Select(currentWebSkin => currentWebSkin.SkinType)

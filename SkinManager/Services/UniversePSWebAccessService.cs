@@ -3,6 +3,7 @@ using SkinManager.Types;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ namespace SkinManager.Services;
 public static class UniversePsWebAccessService{
     private static readonly Dictionary<(string SkinType, string SkinSubType), string> _skinTypeAddresses =
         PopulateAddresses();
+    private static readonly Dictionary<string,string> _skinTypeMappings = PopulateSkinTypeMappings();
 
     #region Web Address Strings
 
@@ -116,6 +118,36 @@ public static class UniversePsWebAccessService{
         return skinTypeAddresses;
     }
 
+    private static Dictionary<string, string> PopulateSkinTypeMappings(){
+        Dictionary<string, string> skinTypeMappings = new();
+        
+        skinTypeMappings.Add("city","Pioneer 2");
+        skinTypeMappings.Add("lobby", "Visual Lobby");
+        skinTypeMappings.Add("loby", "Visual Lobby");
+        skinTypeMappings.Add("caves", "Cave");
+        skinTypeMappings.Add("cave", "Cave");
+        skinTypeMappings.Add("cca", "Central Control Area");
+        skinTypeMappings.Add("central control area", "Central Control Area");
+        skinTypeMappings.Add("crater", "Crater Interior");
+        skinTypeMappings.Add("pioneer", "Pioneer 2");
+        skinTypeMappings.Add("pionner", "Pioneer 2");
+        skinTypeMappings.Add("p2", "Pioneer 2");
+        skinTypeMappings.Add("seaside", "Central Control Area");
+        skinTypeMappings.Add("jungle", "Central Control Area");
+        skinTypeMappings.Add("gryphon", "Central Control Area");
+        skinTypeMappings.Add("tower", "Control Tower");
+        skinTypeMappings.Add("spaceship", "VR Spaceship");
+        skinTypeMappings.Add("temple", "VR Temple");
+        skinTypeMappings.Add("seabed", "Seabed");
+        skinTypeMappings.Add("forest", "Forest");
+        skinTypeMappings.Add("mine", "Mines");
+        skinTypeMappings.Add("ruin", "Ruins");
+        skinTypeMappings.Add("subterranean", "Subterranean Desert");
+        skinTypeMappings.Add("dragon", "Forest");
+        skinTypeMappings.Add("falz", "Ruins");
+        return skinTypeMappings;
+    }
+
     public static async Task<IEnumerable<WebSkin>> GetAvailableSkinsAsync(HttpClient httpClient){
         List<WebSkin> skins = [];
 
@@ -130,6 +162,7 @@ public static class UniversePsWebAccessService{
     private static async Task<IEnumerable<WebSkin>> GetSkinsFromWebsite(HttpClient httpClient, string skinType,
         string skinSubType, string address){
         string response = await httpClient.GetStringAsync(BaseSiteAddress + address);
+        await Task.Delay(100);
 
         HtmlDocument theDoc = new();
 
@@ -152,6 +185,7 @@ public static class UniversePsWebAccessService{
         List<string> currenSkinScreenshots = [];
 
         foreach (HtmlNode authorNode in authors){
+            
             //The html lists the author's name in the div attribute name with a value that starts with cat_.
             currentAuthor = authorNode.GetAttributeValue("name", "").Replace("cat_", string.Empty);
 
@@ -164,6 +198,13 @@ public static class UniversePsWebAccessService{
                 IEnumerable<HtmlNode> skinRows = skinTableNodes.SelectNodes(".//tr[@class='ligneSkin']")!;
 
                 foreach (HtmlNode skinRow in skinRows){
+                    
+                    //The html list an img tag that has an alt attribute value of "PSOBB" for blue burst skins.
+                    string versionAlt = skinRow.SelectSingleNode(".//img").GetAttributeValue("alt", string.Empty);
+                    if (versionAlt != "PSOBB"){
+                        break;
+                    }
+                    
                     //The html lists the skin name in the inner text of an a node with the attribute href that has a value that starts with #skin_.
                     //The first td of row is not closed causing the nodes to not be properly linked.
                     currentSkinName =
@@ -218,9 +259,22 @@ public static class UniversePsWebAccessService{
     }
 
     private static string GetSkinSubType(string skinType, string skinName){
-        if (skinType == "Area") return Areas.FirstOrDefault(skinName.Contains) ?? "Other";
-        else if (skinType == "Monsters") return Enemies.FirstOrDefault(skinName.Contains) ?? "Other";
+        if (skinType == "Areas"){
+            string result = _skinTypeMappings.Any(currentPair =>
+                skinName.Contains(currentPair.Key, StringComparison.OrdinalIgnoreCase))
+                ? _skinTypeMappings.First(currentPair =>
+                    skinName.Contains(currentPair.Key, StringComparison.OrdinalIgnoreCase)).Value
+                : Areas.FirstOrDefault(currentArea =>
+                    skinName.Contains(currentArea, StringComparison.OrdinalIgnoreCase)) ?? "Other";
+            return result;
+        }
+        else if (skinType == "Monsters"){
+            return Enemies.FirstOrDefault(currentEnemy => skinName.Contains(currentEnemy, StringComparison.OrdinalIgnoreCase)) ?? "Other";
+        }
+        else if (skinType == "Effects"){
+            return "Effects";
+        }
 
         return "Other";
-    }
+    } 
 }

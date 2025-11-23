@@ -1238,7 +1238,7 @@
   {
     "SkinName": "Eche\u0027s Spaceport Lobby 01",
     "SkinType": "Areas",
-    "SkinSubType": "Lobby",
+    "SkinSubType": "Visual Lobby",
     "Address": "?cat=17",
     "Author": "Echelon",
     "DownloadLinks": [
@@ -1318,7 +1318,7 @@
   {
     "SkinName": "Ancient Lobby Skin",
     "SkinType": "Areas",
-    "SkinSubType": "Lobby",
+    "SkinSubType": "Visual Lobby",
     "Address": "?cat=17",
     "Author": "Greenwing",
     "DownloadLinks": [
@@ -1476,7 +1476,7 @@
   {
     "SkinName": "Lobby 10 Xmas Box",
     "SkinType": "Areas",
-    "SkinSubType": "Lobby",
+    "SkinSubType": "Visual Lobby",
     "Address": "?cat=17",
     "Author": "japanaman2",
     "DownloadLinks": [
@@ -1808,7 +1808,7 @@
   {
     "SkinName": "Night CCA mod (Normal-Ultimate)",
     "SkinType": "Areas",
-    "SkinSubType": "CCA",
+    "SkinSubType": "Central Control Area",
     "Address": "?cat=17",
     "Author": "jericho2442",
     "DownloadLinks": [
@@ -1916,7 +1916,7 @@
   {
     "SkinName": "Sunny CCA mod (Normal-Ultimate)",
     "SkinType": "Areas",
-    "SkinSubType": "CCA",
+    "SkinSubType": "Central Control Area",
     "Address": "?cat=17",
     "Author": "jericho2442",
     "DownloadLinks": [
@@ -2041,7 +2041,7 @@
   {
     "SkinName": "Skyline Lobby",
     "SkinType": "Areas",
-    "SkinSubType": "Lobby",
+    "SkinSubType": "Visual Lobby",
     "Address": "?cat=17",
     "Author": "Kamui S.",
     "DownloadLinks": [
@@ -2057,7 +2057,7 @@
   {
     "SkinName": "Skyline Lobby 2 Rappy",
     "SkinType": "Areas",
-    "SkinSubType": "Lobby",
+    "SkinSubType": "Visual Lobby",
     "Address": "?cat=17",
     "Author": "Kamui S.",
     "DownloadLinks": [
@@ -2389,7 +2389,7 @@
   {
     "SkinName": "Cyan Lobby 1 - bigger res pics of space",
     "SkinType": "Areas",
-    "SkinSubType": "Lobby",
+    "SkinSubType": "Visual Lobby",
     "Address": "?cat=17",
     "Author": "K_I_R_E_E_K",
     "DownloadLinks": [
@@ -2404,7 +2404,7 @@
   {
     "SkinName": "Cyan Lobby 1 - bigger res pics of space \u0026 lobby 5 objects (aquariums)",
     "SkinType": "Areas",
-    "SkinSubType": "Lobby",
+    "SkinSubType": "Visual Lobby",
     "Address": "?cat=17",
     "Author": "K_I_R_E_E_K",
     "DownloadLinks": [
@@ -2451,7 +2451,7 @@
   {
     "SkinName": "Halloween Lobby",
     "SkinType": "Areas",
-    "SkinSubType": "Lobby",
+    "SkinSubType": "Visual Lobby",
     "Address": "?cat=17",
     "Author": "K_I_R_E_E_K",
     "DownloadLinks": [
@@ -2481,7 +2481,7 @@
   {
     "SkinName": "Valentines Lobby",
     "SkinType": "Areas",
-    "SkinSubType": "Lobby",
+    "SkinSubType": "Visual Lobby",
     "Address": "?cat=17",
     "Author": "K_I_R_E_E_K",
     "DownloadLinks": [
@@ -2894,7 +2894,7 @@
   {
     "SkinName": "Episode 3 Lobby (Lobby 12)",
     "SkinType": "Areas",
-    "SkinSubType": "Lobby",
+    "SkinSubType": "Visual Lobby",
     "Address": "?cat=17",
     "Author": "Schthack \u002B Lee",
     "DownloadLinks": [
@@ -3165,7 +3165,7 @@
   {
     "SkinName": "Lobby 1-10 New Outside View",
     "SkinType": "Areas",
-    "SkinSubType": "Lobby",
+    "SkinSubType": "Visual Lobby",
     "Address": "?cat=17",
     "Author": "Twisted",
     "DownloadLinks": [
