@@ -110,6 +110,8 @@ public partial class SlideshowControl : UserControl{
     }
 
     private Bitmap ChangeImage(bool goingForward){
+        if(Images.Count == 0) return new RenderTargetBitmap(new PixelSize(1, 1));
+        
         if (goingForward) _currentImageIndex = _currentImageIndex == Images.Count - 1 ? 0 : ++_currentImageIndex;
         else _currentImageIndex = _currentImageIndex == 0 ? Images.Count - 1 : --_currentImageIndex;
         

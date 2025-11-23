@@ -10,56 +10,108 @@ namespace SkinManager.Extensions;
 
 public static class SkinsStateExtensions{
 
-    public static SkinsState AddAppliedSkin(this SkinsState currentState, LocalSkin appliedSkin) 
-        => currentState with { AppliedSkins = currentState.AppliedSkins
-            .Remove((appliedSkin.SkinType, appliedSkin.SkinSubType))
-            .Add((appliedSkin.SkinType, appliedSkin.SkinSubType), appliedSkin)};
-    public static SkinsState AddAppliedSkins(this SkinsState currentState, IEnumerable<LocalSkin> appliedSkins)
-        => currentState with { AppliedSkins = currentState.AppliedSkins.AddRange(appliedSkins.Select(currentSkin 
-            => new KeyValuePair<(string, string), LocalSkin>((currentSkin.SkinType, currentSkin.SkinSubType), currentSkin)))};
+    public static SkinsState AddAppliedSkin(this SkinsState currentState, LocalSkin appliedSkin){
+        if(currentState.AppliedSkins.Count == 0) return currentState with {  AppliedSkins = currentState.AppliedSkins.Add(appliedSkin) };
+        return currentState.AppliedSkins.Any(currentAppliedSkin =>
+            currentAppliedSkin.SkinType == appliedSkin.SkinType &&
+            currentAppliedSkin.SkinSubType == appliedSkin.SkinSubType)
+            ? currentState with{
+                AppliedSkins = currentState.AppliedSkins.Where(currentAppliedSkin =>
+                    currentAppliedSkin.SkinType != appliedSkin.SkinType &&
+                    currentAppliedSkin.SkinSubType != appliedSkin.SkinSubType).Concat([appliedSkin]).ToImmutableList()
+            }
+            : currentState with{ AppliedSkins = currentState.AppliedSkins.Add(appliedSkin) };
+    }
+
+    public static SkinsState AddAppliedSkins(this SkinsState currentState, IEnumerable<LocalSkin> appliedSkins){
+        if(currentState.AppliedSkins.Count == 0) return currentState with {  AppliedSkins = appliedSkins.ToImmutableList() };
+        return currentState with{
+            AppliedSkins = currentState.AppliedSkins.Aggregate(new List<LocalSkin>(), (newAppliedSkins, currentAppliedSkin)
+                => appliedSkins.Any(newAppliedSkin => currentAppliedSkin.SkinType == newAppliedSkin.SkinType &&
+                                                      currentAppliedSkin.SkinSubType == newAppliedSkin.SkinSubType)
+                        ? newAppliedSkins
+                        : [..newAppliedSkins, currentAppliedSkin]
+                ).ToImmutableList() };
+    }
     public static SkinsState RemoveAppliedSkin(this SkinsState currentState, LocalSkin appliedSkin)
-        => currentState with { AppliedSkins = currentState.AppliedSkins.Remove((appliedSkin.SkinType, appliedSkin.SkinSubType))};
-    public static SkinsState AddLocalSkins(this SkinsState currentState, IEnumerable<LocalSkin> localSkins)
-        => currentState with { GameSkins = currentState.GameSkins.Union(localSkins.Select(currentSkin => new Either<WebSkin, LocalSkin>.Right(currentSkin))).ToImmutableList() };
+        => currentState with { AppliedSkins = currentState.AppliedSkins.Where(currentAppliedSkin => currentAppliedSkin.SkinType != appliedSkin.SkinType && currentAppliedSkin.SkinSubType != appliedSkin.SkinSubType).ToImmutableList()};
+    
+    public static SkinsState AddLocalSkin(this SkinsState currentState, LocalSkin localSkin){
+        if(currentState.LocalSkins.Count == 0) return currentState with { LocalSkins = currentState.LocalSkins.Add(localSkin) };
+        
+        return currentState.LocalSkins.Any(currentLocalSkin => currentLocalSkin.SkinName == localSkin.SkinName) 
+            ? currentState 
+            : currentState with {LocalSkins = currentState.LocalSkins.Add(localSkin)};
+    }
+    public static SkinsState AddLocalSkins(this SkinsState currentState, IEnumerable<LocalSkin> localSkins){
+        if(currentState.LocalSkins.Count == 0) return currentState with { LocalSkins = localSkins.ToImmutableList() };
+        
+        var newLocalSkins = currentState.LocalSkins.Aggregate(new List<LocalSkin>(),
+            (currentSkins, currentSkin) =>
+                currentState.WebSkins.Any(currenLocalSkin => currenLocalSkin.SkinName == currentSkin.SkinName) ? currentSkins : [..currentSkins, currentSkin]);
+        return currentState with{ LocalSkins = currentState.LocalSkins.Union(newLocalSkins).ToImmutableList() };
+    }
+    
+    public static SkinsState ReplaceLocalSkins(this SkinsState currentState, IEnumerable<LocalSkin> localSkins)
+    => currentState with  { LocalSkins = localSkins.ToImmutableList() };
+    
+    public static SkinsState ReplaceWebSkins(this SkinsState currentState, IEnumerable<WebSkin> webSkins)
+        => currentState with  { WebSkins = webSkins.ToImmutableList() };
 
     public static SkinsState AddWebSkins(this SkinsState currentState, IEnumerable<WebSkin> webSkins){
-            var localSkinNames = currentState.GameSkins.Rights().Select(currentLocalSkin => currentLocalSkin.SkinName);
-            var newWebSkins = webSkins.Aggregate(new List<Either<WebSkin, LocalSkin>.Left>(),
+        if(currentState.WebSkins.Count == 0) return currentState with { WebSkins = webSkins.ToImmutableList() };
+        
+            var newWebSkins = currentState.WebSkins.Aggregate(new List<WebSkin>(),
                 (currentSkins, currentSkin) =>
-                    localSkinNames.Contains(currentSkin.SkinName.RemoveSpecialCharacters()) ? currentSkins : [..currentSkins, new Either<WebSkin,LocalSkin>.Left(currentSkin)]);
+                    currentState.WebSkins.Any(currentWebSkin => currentWebSkin.SkinName == currentSkin.SkinName) ? currentSkins : [..currentSkins, currentSkin]);
 
-            return currentState with{ GameSkins = currentState.GameSkins.AddRange(newWebSkins.ToImmutableList()) };
+            return currentState with{ WebSkins = currentState.WebSkins.AddRange(newWebSkins.ToImmutableList()) };
     }
-    public static SkinsState AddSkins(this SkinsState currentState, IEnumerable<Either<WebSkin, LocalSkin>> newSkins){
-        var split = newSkins.Partition();
-        var localSkinNames = split.Item2.Select(currentLocalSkin => currentLocalSkin.SkinName);
-        var newWebSkins = split.Item1.Aggregate(new List<Either<WebSkin, LocalSkin>>(),
-            (currentSkins, currentSkin) =>
-                localSkinNames.Contains(currentSkin.SkinName.RemoveSpecialCharacters()) ? currentSkins : [..currentSkins, new Either<WebSkin,LocalSkin>.Left(currentSkin)]);
-        var combinedLists = newWebSkins.Concat(split.Item2.Select(currentLocalSkin => new Either<WebSkin,LocalSkin>.Right(currentLocalSkin)));
-        return currentState with{ GameSkins = combinedLists.ToImmutableList() };
-    }
+    public static SkinsState AddSkins(this SkinsState currentState, IEnumerable<WebSkin> newSkins, IEnumerable<LocalSkin> localSkins) => currentState.AddWebSkins(newSkins).AddLocalSkins(localSkins);
+
+    private static SkinsState RemoveWebSkin(this SkinsState currentState, WebSkin webSkin) => currentState with {WebSkins = currentState.WebSkins.Remove(webSkin)};
 
     public static SkinsState ChangeWebSkinToLocalSkin(this SkinsState currentState, WebSkin currentSkin, string newLocalSkinPath) 
-        => currentState with { GameSkins = currentState.GameSkins.Remove(currentSkin).Add(currentSkin.ToLocalSkin(newLocalSkinPath))};
-    public static string GetAppliedSkinName(this SkinsState currentState, string selectedSkinTypeName, string selectedSkinSubTypeName) 
-        => currentState.AppliedSkins.TryGetValue((selectedSkinTypeName, selectedSkinSubTypeName), out LocalSkin? appliedSkin)
-            ? appliedSkin.SkinName
-            : "None";
+        => currentState.RemoveWebSkin(currentSkin).AddLocalSkin(currentSkin.ToLocalSkin(newLocalSkinPath));
+    public static Option<LocalSkin> GetAppliedSkin(this SkinsState currentState, string skinType, string skinSubType) 
+        => currentState.AppliedSkins.SingleOrDefault(currentAppliedSkin => currentAppliedSkin.SkinType == skinType && currentAppliedSkin.SkinSubType == skinSubType) is { } appliedSkin
+            ? appliedSkin
+            : Option<LocalSkin>.None;
+
+    public static Skin GetSkinFromDisplaySkin(this SkinsState currentState, DisplaySkin currentSkin){
+        Skin? foundSkin = currentState.WebSkins.FirstOrDefault(currentWebSkin
+            => currentWebSkin.SkinName == currentSkin.SkinName
+               && currentWebSkin.SkinType == currentSkin.SkinType
+               && currentWebSkin.SkinSubType == currentSkin.SkinSubType);
+        
+        return foundSkin ?? currentState.LocalSkins.First(currentLocalSkin
+                   => currentLocalSkin.SkinName == currentSkin.SkinName
+                      && currentLocalSkin.SkinType == currentSkin.SkinType
+                      && currentLocalSkin.SkinSubType == currentSkin.SkinSubType);
+    }
+
+    public static IEnumerable<Skin> SearchForSkins(this SkinsState currentState, string searchText) =>
+        currentState.WebSkins.Where(currentWebSkin
+                => currentWebSkin.SkinName.Contains(searchText) || currentWebSkin.SkinType.Contains(searchText) ||
+                   currentWebSkin.SkinSubType.Contains(searchText))
+            .Concat<Skin>(currentState.LocalSkins.Where(currentLocalSkin
+                => currentLocalSkin.SkinName.Contains(searchText) || currentLocalSkin.SkinType.Contains(searchText) ||
+                   currentLocalSkin.SkinSubType.Contains(searchText)));
+
     public static IEnumerable<string> GetSkinTypes(this SkinsState currentState) 
-        => currentState.GameSkins.Lefts().Select(currentWebSkin => currentWebSkin.SkinType)
-            .Concat(currentState.GameSkins.Rights().Select(currentLocalSkin => currentLocalSkin.SkinType)).Distinct();
+        => currentState.WebSkins.Select(currentWebSkin => currentWebSkin.SkinType)
+            .Concat(currentState.LocalSkins.Select(currentLocalSkin => currentLocalSkin.SkinType)).Distinct();
     public static IEnumerable<string> GetSkinSubTypes(this SkinsState currentState,string selectedSkinTypeName) 
-        => currentState.GameSkins.Lefts().Where(currentWebSkin => currentWebSkin.SkinType  == selectedSkinTypeName)
+        => currentState.WebSkins.Where(currentWebSkin => currentWebSkin.SkinType  == selectedSkinTypeName)
             .Select(currentWebSkin => currentWebSkin.SkinSubType)
-            .Concat(currentState.GameSkins.Rights().Where(currentLocalSkin => currentLocalSkin.SkinType == selectedSkinTypeName)
+            .Concat(currentState.LocalSkins.Where(currentLocalSkin => currentLocalSkin.SkinType == selectedSkinTypeName)
                 .Select(currentLocalSkin => currentLocalSkin.SkinSubType)).Distinct();
     public static IEnumerable<string> GetAvailableSkinNames(this SkinsState currentState,string skinType, string skinSubType) 
-        => currentState.GameSkins.Lefts()
+        => currentState.WebSkins
             .Where(x => x.SkinType == skinType &&
                         x.SkinSubType == skinSubType)
             .Select(x => x.SkinName)
-            .Concat(currentState.GameSkins.Rights()
+            .Concat(currentState.LocalSkins
                 .Where(x => x.SkinType == skinType && x.SkinSubType == skinSubType)
                 .Select(x => x.SkinName));
 
@@ -67,30 +119,27 @@ public static class SkinsStateExtensions{
         bool showWebSkins) =>
         showWebSkins ? GetAllAvailableSkins(currentState, skinType, skinSubType) : GetAllAvailableLocalSkins(currentState, skinType, skinSubType);
     
-    private static IEnumerable<Skin> GetAllAvailableSkins(SkinsState currentState, string skinType, string skinSubType) 
-        => Enumerable.Empty<Skin>().Concat(currentState.GameSkins.Lefts().Where(currentWebSkin => currentWebSkin.SkinType == skinType && currentWebSkin.SkinSubType == skinSubType))
-            .Concat(currentState.GameSkins.Rights().Where(currentLocalSkin => currentLocalSkin.SkinType == skinType && currentLocalSkin.SkinSubType == skinSubType));
+    private static IEnumerable<Skin> GetAllAvailableSkins(SkinsState currentState, string skinType, string skinSubType) =>
+        currentState.WebSkins.Where(currentWebSkin => currentWebSkin.SkinType == skinType &&  currentWebSkin.SkinSubType == skinSubType)
+            .Concat<Skin>(currentState.LocalSkins.Where(currentLocalSkin => currentLocalSkin.SkinType == skinType &&  currentLocalSkin.SkinSubType == skinSubType));
 
     private static IEnumerable<Skin>
         GetAllAvailableLocalSkins(SkinsState currentState, string skinType, string skinSubType) =>
-        currentState.GameSkins.Rights().Where(currentLocalSkin =>
+        currentState.LocalSkins.Where(currentLocalSkin =>
             currentLocalSkin.SkinType == skinType && currentLocalSkin.SkinSubType == skinSubType);
     
     public static bool GetIsWebSkinSelected(this SkinsState currentState, Option<Skin> selectedSkinOption) 
-        => selectedSkinOption.Fold(false, (matchFound, selectedSkin) => 
-            selectedSkin switch{
-                WebSkin selectedWebSkin => currentState.GameSkins.Lefts()
-                    .Any(currentWebSkin => currentWebSkin.SkinName == selectedWebSkin.SkinName),
-                LocalSkin selectedLocalSkin => currentState.GameSkins.Rights()
-                    .Any(currentLocalSkin => currentLocalSkin.SkinName == selectedLocalSkin.SkinName),
-                _ => false
-            }
-        );
+        => selectedSkinOption.Match(currentSkin => currentSkin is WebSkin ? true : false, () => false);
+    public static bool GetIsWebSkinSelected(this SkinsState currentState, Option<DisplaySkin> selectedSkinOption) 
+        => selectedSkinOption.Match(currentSkin => currentState.GetSkinFromDisplaySkin(currentSkin) switch{
+            WebSkin => true,
+            LocalSkin => false
+        }, () => false);
     public static IEnumerable<string> GetSkinScreenshots(this SkinsState currentState,string skinName) 
-        => currentState.GameSkins.Lefts().FirstOrDefault(currentSkin => currentSkin.SkinName == skinName)?.ScreenshotLinks
-           ?? currentState.GameSkins.Rights().First(currentSkin => currentSkin.SkinName == skinName).ScreenshotFileNames;
+        => currentState.WebSkins.FirstOrDefault(currentSkin => currentSkin.SkinName == skinName)?.ScreenshotLinks
+           ?? currentState.LocalSkins.First(currentSkin => currentSkin.SkinName == skinName).ScreenshotFileNames;
     public static string GetBackupLocation(this SkinsState currentState, string selectedSkinName, string skinsLocation)
-        => currentState.GameSkins.Rights().FirstOrDefault(x => x.SkinName == selectedSkinName) is{ } selectedSkin
+        => currentState.LocalSkins.FirstOrDefault(x => x.SkinName == selectedSkinName) is{ } selectedSkin
             ? Path.Combine(skinsLocation, selectedSkin.SkinType, "Originals",
                 selectedSkin.SkinSubType)
             : string.Empty;

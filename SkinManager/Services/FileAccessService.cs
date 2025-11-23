@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -11,25 +10,25 @@ using Avalonia.Media.Imaging;
 using LanguageExt;
 using SharpCompress.Common;
 using SharpCompress.Readers;
-using static LanguageExt.Prelude;
 
 namespace SkinManager.Services;
 
 public static class FileAccessService{
     private static readonly JsonSerializerOptions Options = new(){ WriteIndented = true };
 
-    public static async Task<Fin<bool>> ApplySkinAsync(string skinDirectoryName, string gameDirectoryName){
+    public static Fin<bool> ApplySkin(string skinDirectoryName, string gameDirectoryName){
         try{
             foreach (DirectoryInfo currentFolder in new DirectoryInfo(skinDirectoryName).GetDirectories("*.*",
                          SearchOption.AllDirectories).Where(theDirectory => theDirectory.Name != "Screenshots")){
                 string dirPath = string.Empty;
                 DirectoryInfo? enumeratingParent = currentFolder.Parent;
                 while (enumeratingParent is not null && enumeratingParent.FullName != skinDirectoryName){
-                    dirPath =  Path.Combine(dirPath,enumeratingParent.Name);
+                    dirPath = Path.Combine(dirPath, enumeratingParent.Name);
                     enumeratingParent = enumeratingParent.Parent;
                 }
+
                 foreach (FileInfo theFile in currentFolder.GetFiles()){
-                    string destinationPath = Path.Combine(gameDirectoryName, dirPath,currentFolder.Name, theFile.Name);
+                    string destinationPath = Path.Combine(gameDirectoryName, dirPath, currentFolder.Name, theFile.Name);
                     File.Copy(theFile.FullName, destinationPath, true);
                 }
             }
@@ -64,10 +63,11 @@ public static class FileAccessService{
                 string dirPath = string.Empty;
                 DirectoryInfo? enumeratingParent = currentFolder.Parent;
                 while (enumeratingParent is not null && enumeratingParent.Name != skinDirectory.Name){
-                    dirPath =  Path.Combine(dirPath,enumeratingParent.Name);
+                    dirPath = Path.Combine(dirPath, enumeratingParent.Name);
                     enumeratingParent = enumeratingParent.Parent;
                 }
-                string newBackUpDirectoryName = Path.Combine(backUpDirectoryName, dirPath,currentFolder.Name);
+
+                string newBackUpDirectoryName = Path.Combine(backUpDirectoryName, dirPath, currentFolder.Name);
                 if (CreateFolder(newBackUpDirectoryName)){
                     foreach (FileInfo theFile in currentFolder.GetFiles()){
                         string backupFileName = Path.Combine(newBackUpDirectoryName, theFile.Name);
@@ -76,19 +76,17 @@ public static class FileAccessService{
                         if (File.Exists(originalFileName) && !File.Exists(backupFileName)){
                             File.Copy(originalFileName, backupFileName, false);
                         }
-                        else{
-                            FileStream originalFileStream = File.Exists("FilesToDelete.txt")
-                                ? File.OpenWrite("FilesToDelete.txt")
-                                : File.Create("FilesToDelete.txt");
+                        else if(!File.Exists(originalFileName)){
+                            string filesToDeletePath = Path.Combine(newBackUpDirectoryName, "FilesToDelete.txt");
+                            FileStream fileToDeleteStream = File.Open(filesToDeletePath, FileMode.Append);
 
-                            await using StreamWriter writer = new StreamWriter(originalFileStream);
+                            await using StreamWriter writer = new StreamWriter(fileToDeleteStream);
                             await writer.WriteLineAsync(originalFileName);
                             writer.Close();
                         }
                     }
                 }
             }
-
             return true;
         }
         catch (Exception ex){
@@ -99,29 +97,30 @@ public static class FileAccessService{
     public static async Task<Fin<bool>> RestoreBackupAsync(string backUpDirectoryName, string gameDirectoryName){
         try{
             DirectoryInfo backupDirectory = new(backUpDirectoryName);
-            IEnumerable<DirectoryInfo> subDirs = await Task.Run(() => backupDirectory
-                .GetDirectories("*.*", SearchOption.AllDirectories));
+            DirectoryInfo originalsFolder = new(Path.Combine(backupDirectory.Parent!.Parent!.FullName, "Originals",
+                backupDirectory.Parent!.Name));
+            IEnumerable<DirectoryInfo> subDirs = originalsFolder.GetDirectories("*.*", SearchOption.AllDirectories);
+            
 
-            await Task.Run(async () => {
-                foreach (DirectoryInfo currentFolder in subDirs){
-                    foreach (FileInfo theFile in currentFolder.GetFiles()){
-                        string gameFileName = Path.Combine(gameDirectoryName, currentFolder.Name, theFile.Name);
-                        if (File.Exists(gameFileName)){
-                            File.Copy(theFile.FullName, gameFileName, true);
-                        }
-                    }
-                }
-
-                string filesToDelete = "FilesToDelete.txt";
+            foreach (DirectoryInfo currentFolder in subDirs.Where(theFolder => theFolder.Name != "Screenshots")){
+                
+                string filesToDelete = Path.Combine(originalsFolder.FullName,currentFolder.Name, "FilesToDelete.txt");
                 if (File.Exists(filesToDelete)){
                     using StreamReader reader = new StreamReader(filesToDelete);
                     while (!reader.EndOfStream){
+                        string currentLine = await reader.ReadLineAsync() ?? string.Empty;
                         File.Delete((await reader.ReadLineAsync())!);
                     }
 
                     File.Delete(filesToDelete);
                 }
-            });
+                foreach (FileInfo theFile in currentFolder.GetFiles()){
+                    string gameFileName = Path.Combine(gameDirectoryName,currentFolder.Name, theFile.Name);
+                    if (File.Exists(gameFileName)){
+                        File.Copy(theFile.FullName, gameFileName, true);
+                    }
+                }
+            }
 
             return true;
         }
@@ -179,6 +178,7 @@ public static class FileAccessService{
         try{
             if (File.Exists(fileName)){
                 await using Stream fileStream = File.OpenRead(fileName);
+                fileStream.Position = 0;
                 return await JsonSerializer.DeserializeAsync<T>(fileStream) switch{
                     { } objectInfo => objectInfo,
                     _ => Fin.Fail<T>("There was an issue reading the file.")
@@ -218,6 +218,7 @@ public static class FileAccessService{
         try{
             if (File.Exists(fileName)){
                 await using Stream fileStream = File.OpenRead(fileName);
+                fileStream.Position = 0;
                 return await JsonSerializer.DeserializeAsync<IEnumerable<T>>(fileStream) switch{
                     { } collection => Fin.Succ<ImmutableList<T>>([..collection]),
                     _ => Fin.Succ<ImmutableList<T>>([])
@@ -258,12 +259,14 @@ public static class FileAccessService{
         }
     }
 
-    public static Fin<IEnumerable<string>> SaveScreenshots(string path, IEnumerable<(Bitmap Screenshot, string FileExtension)> screenshots){
+    public static Fin<IEnumerable<string>> SaveScreenshots(string path,
+        IEnumerable<(Bitmap Screenshot, string FileExtension)> screenshots){
         try{
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-            
+
             return screenshots.Aggregate(new List<string>(), (currentScreenshotLinks, currentScreenshot) => {
-                string newPath = Path.Combine(path, $"Screenshot {currentScreenshotLinks.Count + 1}{currentScreenshot.FileExtension}");
+                string newPath = Path.Combine(path,
+                    $"Screenshot {currentScreenshotLinks.Count + 1}{currentScreenshot.FileExtension}");
                 currentScreenshot.Screenshot.Save(newPath);
                 return [..currentScreenshotLinks, newPath];
             });

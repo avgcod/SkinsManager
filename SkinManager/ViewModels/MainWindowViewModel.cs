@@ -23,34 +23,41 @@ namespace SkinManager.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase{
     #region Variables
+
     private readonly Window _currentWindow;
     private readonly string _appSettingsFile;
     private bool _applyNoBackup = false;
     private AppSettings _appSettings = AppSettings.Empty();
     private SkinsState _skinsState = SkinsState.Empty();
     private GameInfo _gameInfo = GameInfo.Empty();
+
     #endregion
 
     #region Collections
+
     public IEnumerable<string> SkinTypeNames => RefreshSkinTypeNames();
     public List<string> AvailableSkinSubTypes => RefreshSkinSubTypeNames();
     public IEnumerable<Skin> AvailableSkins => RefreshAvailableSkins();
+    //public IEnumerable<DisplaySkin> AvailableSkins => RefreshAvailableSkins();
+
     public IEnumerable<string> WebSources =>
         Enum.GetNames<SkinsSource>()
             .Where(x => !string.Equals(x, nameof(SkinsSource.Local), StringComparison.OrdinalIgnoreCase));
 
     [ObservableProperty] private List<Bitmap> _screenshots = [];
+
     #endregion
 
     #region Properties
 
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(AvailableSkins))]private bool _showWebSkins = true;
-    
-    [ObservableProperty] 
-    [NotifyCanExecuteChangedFor(nameof(ApplySkinCommand))]
-    [NotifyPropertyChangedFor(nameof(Screenshots))]
-    [NotifyPropertyChangedFor(nameof(WebSkinSelected))]
-    private Option<Skin> _selectedSkin = Option<Skin>.None;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(AvailableSkins))]
+    private string _searchText = string.Empty;
+
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(AvailableSkins))]
+    private bool _showWebSkins = true;
+
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(ApplySkinCommand))]
+    private Option<DisplaySkin> _selectedSkin = Option<DisplaySkin>.None;
 
     [ObservableProperty] private string _processingText = "Processing. Please wait.";
     [ObservableProperty] private string _skinsLocation = string.Empty;
@@ -68,13 +75,14 @@ public partial class MainWindowViewModel : ViewModelBase{
     private bool WebSkinSelected => _skinsState.GetIsWebSkinSelected(SelectedSkin);
 
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(RestoreCommand))]
-    private string _appliedSkinName = string.Empty;
+    private Option<LocalSkin> _appliedSkin = Option<LocalSkin>.None;
 
     [ObservableProperty] private string _selectedSkinType = string.Empty;
 
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(AvailableSkins))]
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AvailableSkins))]
     [NotifyCanExecuteChangedFor(nameof(RestoreCommand))]
-    private int _selectedSkinSubTypeIndex = -1; 
+    private int _selectedSkinSubTypeIndex = -1;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RefreshSkinsClickedCommand))]
@@ -82,6 +90,7 @@ public partial class MainWindowViewModel : ViewModelBase{
     [NotifyCanExecuteChangedFor(nameof(BrowseFolderCommand))]
     [NotifyCanExecuteChangedFor(nameof(BrowseExecutableCommand))]
     private bool _busy = false;
+
     #endregion
 
     public MainWindowViewModel(MainWindow currentWindow, string appSettingsFile){
@@ -94,6 +103,8 @@ public partial class MainWindowViewModel : ViewModelBase{
     }
 
     private async void WindowLoaded(object? sender, RoutedEventArgs e){
+        Busy = true;
+
         await LoadInformation();
 
         GameLocation = _gameInfo.GameLocation;
@@ -101,87 +112,109 @@ public partial class MainWindowViewModel : ViewModelBase{
         GameExecutableLocation = _gameInfo.GameExecutable;
 
         RefreshSkins();
+
+        Busy = false;
     }
 
     private async void OnWindowClosing(object? sender, CancelEventArgs e){
         _currentWindow.Closing -= OnWindowClosing;
         _currentWindow.Loaded -= WindowLoaded;
-        
+
         await SaveInformation();
     }
 
     private async Task LoadInformation(){
         (await FileAccessService.LoadJsonToObject<AppSettings>(_appSettingsFile))
             .IfSucc(currentLocations => _appSettings = currentLocations);
-        
+
         (await FileAccessService.LoadJsonToObject<GameInfo>(nameof(GameInfo) + ".json"))
             .IfSucc(currentGameInfo => _gameInfo = currentGameInfo);
 
-        var addressBooks = (await Enum.GetNames<SkinsSource>().Select(currentSource => currentSource + "AddressBook.json")
+        var addressBooks = (await Enum.GetNames<SkinsSource>()
+                .Select(currentSource => currentSource + "AddressBook.json")
                 .SelectAsync(FileAccessService.LoadJsonToObject<AddressBook>))
             .Successes();
         _skinsState = _skinsState with{ AddressBooks = _skinsState.AddressBooks.AddRange(addressBooks) };
-        
+
         LocalSkinsAccessService.GetAvailableSkinsAsync(_gameInfo.SkinsLocation)
             .IfSucc(localSkins => _skinsState = _skinsState.AddLocalSkins(localSkins));
-        
+
         (await FileAccessService.LoadJsonToImmutableList<WebSkin>("CachedSkins.json"))
             .IfSucc(cachedSkins => _skinsState = _skinsState.AddWebSkins(cachedSkins));
-        
+
         (await FileAccessService.LoadJsonToImmutableList<LocalSkin>("AppliedSkins.json"))
             .IfSucc(appliedSkins => _skinsState = _skinsState.AddAppliedSkins(appliedSkins));
     }
 
     private async Task SaveInformation(){
         List<Task> tasks =[
+            FileAccessService.SaveIEnumerableToJson(_skinsState.WebSkins, _appSettings.CachedSkinsFile),
             FileAccessService.SaveObjectToJson(_gameInfo, _appSettings.GameInfoFile),
-            FileAccessService.SaveObjectToJson(_skinsState.GameSkins.Lefts(), _appSettings.CachedSkinsFile),
             FileAccessService.SaveIEnumerableToJson(_skinsState.AppliedSkins, _appSettings.AppliedSkinsFile)
         ];
         await Task.WhenAll(tasks);
     }
 
     #region Property Changed Handlers
+
     async partial void OnSelectedSkinSubTypeIndexChanged(int value){
-        if (value > -1 ){
-            if (_skinsState.GameSkins.Rights().FirstOrDefault(x => x.SkinName == SelectedSkin.GetSkinName()) is{ } selectedSkin){
-                string backupPath = Path.Combine(_gameInfo.SkinsLocation, selectedSkin.SkinType, "Originals",
-                    selectedSkin.SkinSubType);
-                FileAccessService.FolderHasFiles(backupPath).IfSucc(backUpExists => {
-                    ShowRestore = backUpExists;
-                });
-            }
-            AppliedSkinName = _skinsState.GetAppliedSkinName(SelectedSkinType, GetSelectedSkinSubType());
+        if (value > -1){
+            SelectedSkin.IfSome(currentSkin => {
+                if (_skinsState.LocalSkins.FirstOrDefault(x => x.SkinName == currentSkin.SkinName) is
+                    { } selectedSkin){
+                    string backupPath = Path.Combine(_gameInfo.SkinsLocation, selectedSkin.SkinType, "Originals",
+                        selectedSkin.SkinSubType);
+                    FileAccessService.FolderHasFiles(backupPath).IfSucc(backUpExists => {
+                        ShowRestore = backUpExists;
+                    });
+                }
+            });
+
+
+            AppliedSkin = _skinsState.GetAppliedSkin(SelectedSkinType, GetSelectedSkinSubType());
         }
         else{
-            AppliedSkinName = "None";
+            AppliedSkin = Option<LocalSkin>.None;
         }
     }
 
     partial void OnSelectedSkinTypeChanged(string value){
         OnPropertyChanged(nameof(AvailableSkinSubTypes));
-        if (AvailableSkinSubTypes.Any()) SelectedSkinSubTypeIndex = 0; }
+        if (AvailableSkinSubTypes.Any()) SelectedSkinSubTypeIndex = 0;
+    }
 
-    private string GetSelectedSkinSubType() => SelectedSkinSubTypeIndex > -1 ? AvailableSkinSubTypes[SelectedSkinSubTypeIndex] : string.Empty;
+    partial void OnAppliedSkinChanged(Option<LocalSkin> value){
+        if (AppliedSkin.IsSome)
+            ShowRestore = true;
+    }
 
-    partial void OnSelectedSkinChanged(Option<Skin> value){
+    private string GetSelectedSkinSubType() =>
+        SelectedSkinSubTypeIndex > -1 ? AvailableSkinSubTypes[SelectedSkinSubTypeIndex] : string.Empty;
+
+    partial void OnSelectedSkinChanged(Option<DisplaySkin> value){
         Screenshots = [];
         value.IfSome(async currentSkin => {
-            Screenshots = currentSkin switch{
+            Skin foundSkin = _skinsState.GetSkinFromDisplaySkin(currentSkin);
+            Screenshots = foundSkin switch{
                 WebSkin currentWekSin => new List<Bitmap>(await GetScreenshots(currentWekSin.SkinName)),
                 LocalSkin currentLocalSkin => new List<Bitmap>(await GetScreenshots(currentLocalSkin.SkinName))
             };
         });
+
+        OnPropertyChanged(nameof(WebSkinSelected));
     }
 
     partial void OnSkinsLocationChanged(string value) => _gameInfo = _gameInfo.UpdateSkinsLocation(SkinsLocation);
     partial void OnGameLocationChanged(string value) => _gameInfo = _gameInfo.UpdateGameLocation(GameLocation);
-    partial void OnGameExecutableLocationChanged(string value) => _gameInfo = _gameInfo.UpdateGameExecutableLocation(GameExecutableLocation);
+
+    partial void OnGameExecutableLocationChanged(string value) =>
+        _gameInfo = _gameInfo.UpdateGameExecutableLocation(GameExecutableLocation);
+
     #endregion
 
     private async Task<IEnumerable<Bitmap>> GetScreenshots(string selectedSkinName){
         if (string.IsNullOrEmpty(selectedSkinName)) return [];
-        
+
         return await _skinsState.GetSkinScreenshots(selectedSkinName).SelectAsync(async currentScreenshot =>
             currentScreenshot.Contains("http") switch{
                 true => await ImageHelperService.LoadFromWeb(new Uri(currentScreenshot)) ??
@@ -193,96 +226,54 @@ public partial class MainWindowViewModel : ViewModelBase{
 
     private IEnumerable<string> RefreshSkinTypeNames() => _skinsState.GetSkinTypes().Order();
     private List<string> RefreshSkinSubTypeNames() => _skinsState.GetSkinSubTypes(SelectedSkinType).Order().ToList();
+
     private IEnumerable<Skin> RefreshAvailableSkins() =>
-        _skinsState.GetAvailableSkins(SelectedSkinType, GetSelectedSkinSubType(), ShowWebSkins).OrderBy(currentSkin => currentSkin switch{
-            WebSkin theWebSkin => theWebSkin.SkinName,
-            LocalSkin theLocalSkin => theLocalSkin.SkinName,
-        });
+        string.IsNullOrEmpty(SearchText)
+            ? _skinsState.GetAvailableSkins(SelectedSkinType, GetSelectedSkinSubType(), ShowWebSkins)
+            : GetSearchResults();
 
     private void RefreshSkins(){
         if (SkinTypeNames.FirstOrDefault() is{ } skinType){
             OnPropertyChanged(nameof(SkinTypeNames));
             SelectedSkinType = skinType;
         }
+
         if (AvailableSkinSubTypes.Any()) SelectedSkinSubTypeIndex = 0;
     }
 
     #region Commands
+
     public bool CanStartGame => !string.IsNullOrEmpty(GameExecutableLocation) && !Busy;
     public bool CanRefreshSkins => !Busy;
     public bool CanBrowse => !Busy;
-    public bool CanApply =>
-        !string.IsNullOrEmpty(SelectedSkin.GetSkinName()) && !Busy && !string.IsNullOrWhiteSpace(SkinsLocation);
-    public bool CanRestore =>
-        !string.IsNullOrEmpty(AppliedSkinName) && !Busy && !string.IsNullOrWhiteSpace(SkinsLocation);
+
+    public bool CanApply() =>
+        SelectedSkin.Match(
+            currentSkin => !string.IsNullOrEmpty(currentSkin.SkinName) && !Busy &&
+                           !string.IsNullOrWhiteSpace(SkinsLocation),
+            () => false);
+
+    public bool CanRestore => AppliedSkin.IsSome && !Busy && !string.IsNullOrWhiteSpace(SkinsLocation);
 
     [RelayCommand(CanExecute = nameof(CanApply))]
     private async Task ApplySkin(){
         Busy = true;
-
-        if (WebSkinSelected){
-            ProcessingText = "Downloading and applying skin. Please wait.";
-            
-            WebSkin currentSkin = _skinsState.GameSkins.Lefts()
-                .First(foundSkin => foundSkin.SkinName == SelectedSkin.GetSkinName());
-
-            var downloadInfo = await WebAccessService.DownloadSkin(new HttpClient(),
-                currentSkin, 0, _gameInfo.SkinsLocation);
-
-            downloadInfo.IfSucc(async archivePath => {
-                string newSkinPath = !string.IsNullOrWhiteSpace(currentSkin.Author) 
-                    ? Path.Combine(_gameInfo.SkinsLocation, currentSkin.SkinType,
-                    currentSkin.SkinSubType, currentSkin.SkinName.RemoveSpecialCharacters() + "_by_" + currentSkin.Author)
-                    : Path.Combine(_gameInfo.SkinsLocation, currentSkin.SkinType,
-                        currentSkin.SkinSubType, currentSkin.SkinName.RemoveSpecialCharacters());
-                (await FileAccessService.ExtractSkinAsync(archivePath, newSkinPath)).IfSucc(async _ => {
-                    if (Screenshots.FirstOrDefault() is not null){
-                        string screenshotsPath = Path.Combine(newSkinPath, "Screenshots");
-                        var newScreenshotLinks =
-                            FileAccessService.SaveScreenshots(screenshotsPath, Screenshots
-                                .Zip(currentSkin.ScreenshotLinks)
-                                .Select(currentInfo =>
-                                    new ValueTuple<Bitmap, string>(currentInfo.First,
-                                        Path.GetExtension(currentInfo.Second))));
-                        newScreenshotLinks.IfSucc(currentLinks =>
-                            currentSkin = currentSkin with{ ScreenshotLinks = currentLinks.ToImmutableList() });
-                    }
-
-                    _skinsState = _skinsState.ChangeWebSkinToLocalSkin(currentSkin, newSkinPath);
-                });
-            });
-        }
-        else{
-            ProcessingText = "Applying skin. Please wait.";
-        }
-
-        LocalSkin selectedSkin = _skinsState.GameSkins.Rights().First(x => x.SkinName == SelectedSkin.GetSkinName());
-        string backupLocation = _skinsState.GetBackupLocation(SelectedSkin.GetSkinName(), _gameInfo.SkinsLocation);
-
-        var backupResult = await FileAccessService.CreateBackUpAsync(selectedSkin.SkinLocation, backupLocation,
-            _gameInfo.GameLocation);
-        
-        backupResult.IfSucc(async _ => {
-                if (await FileAccessService.ApplySkinAsync(selectedSkin.SkinLocation, _gameInfo.GameLocation)){
-                    await ShowMessageBox($"Skin {SelectedSkin.GetSkinName()} has been applied successfully.");
-                }else{
-                    await ShowMessageBox($"Unable to apply skin {SelectedSkin.GetSkinName()}");
+        SelectedSkin.IfSome(async currentSkin => {
+                if (_skinsState.GetSkinFromDisplaySkin(currentSkin) is WebSkin currentWebSkin){
+                    ProcessingText = "Downloading skin. Please wait.";
+                    await DownloadSkin(currentWebSkin);
                 }
         });
 
-        backupResult.IfFail(async error => {
-            _applyNoBackup = await ShowConfirmationWindow(
-            $"Failed to create backup.{Environment.NewLine}Do you still want to apply the skin?");});
-        
-        if (_applyNoBackup){
-            if (await FileAccessService.ApplySkinAsync(selectedSkin.SkinLocation, _gameInfo.GameLocation)){
-                await ShowMessageBox($"Skin {SelectedSkin.GetSkinName()} has been applied successfully.");
-            }
-            else{
-                await ShowMessageBox($"Unable to apply skin {SelectedSkin.GetSkinName()}");
-            }
-        }
+        ProcessingText = "Creating backups. Please wait.";
 
+        LocalSkin selectedSkin = _skinsState.LocalSkins.First(x => x.SkinName == SelectedSkin.GetSkinName());
+
+        var backupResult = await CreateBackup(selectedSkin);
+
+        await ApplySkin(backupResult, selectedSkin);
+
+        AppliedSkin = _skinsState.GetAppliedSkin(SelectedSkinType, GetSelectedSkinSubType());
         Busy = false;
     }
 
@@ -353,19 +344,12 @@ public partial class MainWindowViewModel : ViewModelBase{
         ProcessingText = "Refreshing skins. Please wait.";
 
         LocalSkinsAccessService.GetAvailableSkinsAsync(_gameInfo.SkinsLocation).IfSucc(async localSkins => {
-            var newLocalSkins = localSkins
-                .Select(currentNewLocalSkin => new Either<WebSkin, LocalSkin>.Right(currentNewLocalSkin));
+            _skinsState = _skinsState.ReplaceLocalSkins(localSkins);
 
             if (IncludeWeb){
-                var webSkinsToKeep = _skinsState.GameSkins.Lefts()
-                    .Where(currentWebSkin => currentWebSkin.Source != SelectedSource)
-                    .Select(currentWebSkin => new Either<WebSkin, LocalSkin>.Left(currentWebSkin));
-
                 var newWebSkins = await WebAccessService.GetWebSkins(new HttpClient(),
                     _skinsState.AddressBooks.First(currentBook => currentBook.Source == SelectedSource));
-
-                IEnumerable<Either<WebSkin, LocalSkin>> newGameSkins = [..newLocalSkins, ..webSkinsToKeep, ..newWebSkins];
-                _skinsState = _skinsState.AddSkins(newGameSkins);
+                _skinsState = _skinsState.ReplaceWebSkins(newWebSkins);
             }
         });
 
@@ -380,10 +364,18 @@ public partial class MainWindowViewModel : ViewModelBase{
 
         ProcessingText = "Restoring from backup. Please wait.";
 
-        LocalSkin selectedSkin = _skinsState.GameSkins.Rights().First(x => x.SkinName == SelectedSkin.GetSkinName());
-        (await FileAccessService.RestoreBackupAsync(selectedSkin.SkinLocation, _gameInfo.GameLocation))
-            .IfSucc(_ => { _skinsState = _skinsState.RemoveAppliedSkin(selectedSkin); });
+        await _skinsState.GetAppliedSkin(SelectedSkinType, GetSelectedSkinSubType()).Match(async appliedSkin => {
+                await (await FileAccessService.RestoreBackupAsync(appliedSkin.SkinLocation, _gameInfo.GameLocation))
+                    .Match(async _ => {
+                            _skinsState = _skinsState.RemoveAppliedSkin(appliedSkin);
+                            await ShowMessageBox(
+                                $"Successfully restored the back up for {appliedSkin.SkinType}-{appliedSkin.SkinSubType}");
+                        },
+                        async error => await ShowMessageBox(error.Message));
+            },
+            () => Task.CompletedTask);
 
+        AppliedSkin = _skinsState.GetAppliedSkin(SelectedSkinType, GetSelectedSkinSubType());
         Busy = false;
     }
 
@@ -398,6 +390,76 @@ public partial class MainWindowViewModel : ViewModelBase{
     }
 
     #endregion
+
+    private async Task DownloadSkin(WebSkin currentWebSkin){
+        var downloadInfo = await WebAccessService.DownloadSkin(new HttpClient(),
+            currentWebSkin, _gameInfo.SkinsLocation);
+
+        await downloadInfo.Match(async archivePath => {
+                string newSkinPath = !string.IsNullOrWhiteSpace(currentWebSkin.Author)
+                    ? Path.Combine(_gameInfo.SkinsLocation, currentWebSkin.SkinType,
+                        currentWebSkin.SkinSubType,
+                        currentWebSkin.SkinName.RemoveSpecialCharacters() + "_by_" + currentWebSkin.Author)
+                    : Path.Combine(_gameInfo.SkinsLocation, currentWebSkin.SkinType,
+                        currentWebSkin.SkinSubType, currentWebSkin.SkinName.RemoveSpecialCharacters());
+                (await FileAccessService.ExtractSkinAsync(archivePath, newSkinPath)).IfSucc(async _ => {
+                    if (Screenshots.FirstOrDefault() is not null){
+                        string screenshotsPath = Path.Combine(newSkinPath, "Screenshots");
+                        var newScreenshotLinks =
+                            FileAccessService.SaveScreenshots(screenshotsPath, Screenshots
+                                .Zip(currentWebSkin.ScreenshotLinks)
+                                .Select(currentInfo =>
+                                    new ValueTuple<Bitmap, string>(currentInfo.First,
+                                        Path.GetExtension(currentInfo.Second))));
+                        newScreenshotLinks.IfSucc(currentLinks =>
+                            currentWebSkin = currentWebSkin with{
+                                ScreenshotLinks = currentLinks.ToImmutableList()
+                            });
+                    }
+
+                    _skinsState = _skinsState.ChangeWebSkinToLocalSkin(currentWebSkin, newSkinPath);
+                });
+            },
+            async error => await ShowMessageBox(error.Message));
+    }
+
+    private async Task<Fin<bool>> CreateBackup(LocalSkin selectedSkin){
+        string backupLocation = _skinsState.GetBackupLocation(SelectedSkin.GetSkinName(), _gameInfo.SkinsLocation);
+
+        return await FileAccessService.CreateBackUpAsync(selectedSkin.SkinLocation, backupLocation,
+            _gameInfo.GameLocation);
+    }
+
+    private async Task ApplySkin(Fin<bool> backupResult, LocalSkin selectedSkin){
+        backupResult.IfSucc(async _ => {
+            if (FileAccessService.ApplySkin(selectedSkin.SkinLocation, _gameInfo.GameLocation)){
+                _skinsState = _skinsState.AddAppliedSkin(selectedSkin);
+                await ShowMessageBox($"Skin {SelectedSkin.GetSkinName()} has been applied successfully.");
+            }
+            else{
+                await ShowMessageBox($"Unable to apply skin {SelectedSkin.GetSkinName()}");
+            }
+        });
+
+        backupResult.IfFail(async error => {
+            _applyNoBackup = await ShowConfirmationWindow(
+                $"Failed to create backup.{Environment.NewLine}Do you still want to apply the skin?");
+        });
+
+        if (_applyNoBackup){
+            if (FileAccessService.ApplySkin(selectedSkin.SkinLocation, _gameInfo.GameLocation)){
+                _skinsState = _skinsState.AddAppliedSkin(selectedSkin);
+                await ShowMessageBox($"Skin {SelectedSkin.GetSkinName()} has been applied successfully.");
+            }
+            else{
+                await ShowMessageBox($"Unable to apply skin {SelectedSkin.GetSkinName()}");
+            }
+        }
+    }
+
+    private IEnumerable<Skin> GetSearchResults(){
+        return _skinsState.SearchForSkins(SearchText);
+    }
 
     private async Task<bool> ShowConfirmationWindow(string message){
         ConfirmationView confView = new ConfirmationView();
@@ -417,6 +479,4 @@ public partial class MainWindowViewModel : ViewModelBase{
         emboxView.DataContext = new ErrorMessageBoxViewModel(emboxView, errorType, errorText);
         await emboxView.ShowDialog(_currentWindow);
     }
-    
-    
 }

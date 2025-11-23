@@ -11,16 +11,8 @@ using SkinManager.Extensions;
 namespace SkinManager.Services;
 
 public static class WebAccessService{
-    public static async Task<Fin<string>> DownloadSkin(HttpClient httpClient, WebSkin theSkin, int downloadLinkNumber, string skinsLocation){
+    public static async Task<Fin<string>> DownloadSkin(HttpClient httpClient, WebSkin theSkin, string skinsLocation){
         try{
-            /*string downloadLink = theSkin.DownloadLinks.First(currentLink => !currentLink.Contains("Revert", StringComparison.OrdinalIgnoreCase));
-            HttpResponseMessage response =
-                await httpClient.GetAsync(downloadLink);
-
-            string fileExtension = response.RequestMessage?.RequestUri?.OriginalString.Split('.').Last() ??
-                                   string.Empty;
-
-            return (await httpClient.GetStreamAsync(downloadLink), fileExtension);*/
             string downloadLink = theSkin.DownloadLinks.First(currentLink => !currentLink.Contains("Revert", StringComparison.OrdinalIgnoreCase));
             HttpResponseMessage response =
                 await httpClient.GetAsync(downloadLink);
@@ -56,7 +48,7 @@ public static class WebAccessService{
     
     private static async Task<IEnumerable<WebSkin>> GetEphineaSkins(HttpClient theClient, AddressBook addressBook){
         var skinTypes = await EphineaService.GetAvailableSkinTypes(theClient, addressBook.Main, addressBook.Base);
-
+        
         return await (await skinTypes.SelectManyAsync(async currentSkinTypeSiteInfo
             => await EphineaService.GetAvailableSkins(theClient, addressBook.Base,
                 currentSkinTypeSiteInfo.Address, currentSkinTypeSiteInfo.Name)))

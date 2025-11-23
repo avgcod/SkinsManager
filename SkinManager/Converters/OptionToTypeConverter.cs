@@ -13,9 +13,12 @@ public class OptionToTypeConverter : IValueConverter{
         return AvaloniaProperty.UnsetValue; 
     }
 
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        if (value is Skin currentSkin){
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture){
+        return value switch{
+            DisplaySkin currentSkin => currentSkin,
+            _ => Option<DisplaySkin>.None
+        };
+        /*if (value is DisplaySkin currentSkin){
             return currentSkin switch{
                 WebSkin theWebSkin => Option.Some<Skin>(theWebSkin),
                 LocalSkin theLocalSkin => Option.Some<Skin>(theLocalSkin),
@@ -23,7 +26,7 @@ public class OptionToTypeConverter : IValueConverter{
             };
         }
 
-        return Option<Skin>.None;
+        return Option<Skin>.None;*/
     }
     
 }

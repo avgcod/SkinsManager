@@ -14,6 +14,7 @@ public static class EphineaService{
     public static async Task<IEnumerable<SkinTypeSiteInformation>> GetAvailableSkinTypes(HttpClient theClient,
         string skinTypesAddress, string baseSkinAddress){
         string mainPageResponse = await theClient.GetStringAsync(skinTypesAddress);
+        await Task.Delay(TimeSpan.FromMilliseconds(100));
 
         HtmlDocument mainPageDoc = new();
 
@@ -35,45 +36,57 @@ public static class EphineaService{
             .Select(result => result with{
                 Name = result.Name.Replace("\n", string.Empty).NormalizeWhiteSpace().ToTitleCase()
             });
-
     }
 
     public static async Task<IEnumerable<SkinSiteInformation>> GetAvailableSkins(HttpClient theClient,
         string baseAddress, string skinTypeAddress, string currentType){
-        string mainPageResponse = await theClient.GetStringAsync(skinTypeAddress);
+        try{
+            string mainPageResponse = await theClient.GetStringAsync(skinTypeAddress);
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
 
-        HtmlDocument mainPageDoc = new();
+            string[] specialTypes = ["Audio", "Effects", "HUD", "Title Screen", "Objects", "Unitxt"];
 
-        mainPageDoc.LoadHtml(mainPageResponse);
+            HtmlDocument mainPageDoc = new();
 
-        //The html lists all skins on the same page in a table with the class 'wikitable'.
-        IEnumerable<HtmlNode> skinTableNodes =
-            mainPageDoc.DocumentNode.SelectNodes("//table[@class='wikitable']") ?? Enumerable.Empty<HtmlNode>();
+            mainPageDoc.LoadHtml(mainPageResponse);
 
-        //The html lists all skins on the same page each in there own table with the class 'wikitable' with a <td><a> grouping.
-        //IEnumerable<HtmlNode> skinRowNodes =
-        //  mainPageDoc.DocumentNode.SelectNodes("//td/a[contains(@href,'/w/Skin:') and contains(@title,'Skin:')]")
-        //    .Where(currentNode => currentNode.GetAttributeValue("title",string.Empty).Contains(currentNode.InnerText)) ?? Enumerable.Empty<HtmlNode>();
+            //The html lists all skins on the same page in a table with the class 'wikitable'.
+            IEnumerable<HtmlNode> skinTableNodes =
+                mainPageDoc.DocumentNode.SelectNodes("//table[@class='wikitable']") ?? Enumerable.Empty<HtmlNode>();
 
-        string currentSkinName = string.Empty;
-        string currentSkinSubTypeName = string.Empty;
-        string currentSkinAddress = string.Empty;
-        List<SkinSiteInformation> availableSkins = [];
+            //The html lists all skins on the same page each in there own table with the class 'wikitable' with a <td><a> grouping.
+            //IEnumerable<HtmlNode> skinRowNodes =
+            //  mainPageDoc.DocumentNode.SelectNodes("//td/a[contains(@href,'/w/Skin:') and contains(@title,'Skin:')]")
+            //    .Where(currentNode => currentNode.GetAttributeValue("title",string.Empty).Contains(currentNode.InnerText)) ?? Enumerable.Empty<HtmlNode>();
 
-        return skinTableNodes.Select(currentSkinTableNode => {
-            currentSkinName = currentSkinTableNode.SelectSingleNode(".//td[@style='width:300px;']/a").InnerText;
-            currentSkinSubTypeName = currentSkinTableNode.SelectNodes("preceding-sibling::h3/span")?.Last().InnerText ?? "Not Specified";
-            currentSkinAddress = string.Concat(baseAddress,
-                currentSkinTableNode.SelectSingleNode(".//td/a[contains(@href,'/w/Skin:') and contains(@title,'Skin:')]")
-                    .GetAttributeValue("href", string.Empty));
-            return new SkinSiteInformation(currentType, currentSkinSubTypeName, currentSkinName,
-                currentSkinAddress);
-        });
+            string currentSkinName = string.Empty;
+            string currentSkinSubTypeName = string.Empty;
+            string currentSkinAddress = string.Empty;
+            List<SkinSiteInformation> availableSkins = [];
+
+            return skinTableNodes.Select(currentSkinTableNode => {
+                currentSkinName = currentSkinTableNode.SelectSingleNode(".//td[@style='width:300px;']/a").InnerText;
+                currentSkinSubTypeName = specialTypes.Contains(currentType, StringComparer.OrdinalIgnoreCase)
+                    ? currentType
+                    : currentSkinTableNode.SelectNodes("preceding-sibling::h3/span")?.Last().InnerText ??
+                      "Not Specified";
+                currentSkinAddress = string.Concat(baseAddress,
+                    currentSkinTableNode
+                        .SelectSingleNode(".//td/a[contains(@href,'/w/Skin:') and contains(@title,'Skin:')]")
+                        .GetAttributeValue("href", string.Empty));
+                return new SkinSiteInformation(currentType, currentSkinSubTypeName.ToTitleCase(), currentSkinName,
+                    currentSkinAddress);
+            });
+        }
+        catch (Exception ex){
+            throw new Exception(ex.Message, ex);
+        }
     }
 
     public static async Task<WebSkin> GetSkin(HttpClient theClient, string skinAddress, string baseScreenshotsAddress,
         string skinType, string skinSubType){
         string mainPageResponse = await theClient.GetStringAsync(skinAddress);
+        await Task.Delay(TimeSpan.FromMilliseconds(100));
 
         HtmlDocument mainPageDoc = new();
 

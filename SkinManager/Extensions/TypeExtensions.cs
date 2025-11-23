@@ -11,6 +11,14 @@ namespace SkinManager.Extensions;
 
 public static class SkinExtensions
 {
+    public static DisplaySkin ToDisplaySkin(this Skin currentSkin){
+        return currentSkin switch{
+            WebSkin currentWebSkin => new DisplaySkin(currentWebSkin.SkinName, currentWebSkin.SkinType,
+                currentWebSkin.SkinSubType, currentWebSkin.Author, Enum.GetName<SkinsSource>(currentWebSkin.Source)!),
+            LocalSkin currentLocalSkin => new DisplaySkin(currentLocalSkin.SkinName, currentLocalSkin.SkinType,
+                currentLocalSkin.SkinSubType, currentLocalSkin.Author, Enum.GetName<SkinsSource>(SkinsSource.Local)!)
+        };
+    }
     public static bool IsOriginal(this LocalSkin theSkin) => theSkin.SkinLocation.Contains("originals", StringComparison.OrdinalIgnoreCase);
 
     public static string ToTitleCase(this string str) => CultureInfo.CurrentCulture.TextInfo.ToTitleCase(str);
@@ -47,7 +55,7 @@ public static class SkinExtensions
     }
 
     public static string RemoveSpecialCharacters(this string text){
-        string[] specialCharacters = ["&", @"/", @"\", "(", ")"];
+        string[] specialCharacters = ["&", @"/", @"\", "(", ")", ",", "'", ":", ";", "<", ">", "?", "`"];
         return specialCharacters.Aggregate(text, (currentCleanedString, currentSpecialCharacter) => currentCleanedString.Replace(currentSpecialCharacter, string.Empty));
     }
     public static LocalSkin ToLocalSkin(this WebSkin currentSkin, string localSkinPath) 
@@ -84,6 +92,8 @@ public static class LangExtExtensions{
 
     }
     
+    public static string GetSkinName(this Option<DisplaySkin> optionalSkin) => optionalSkin.Match(currentSkin => currentSkin.SkinName, () => string.Empty);
+
     //--- Partionning methods based on  https://github.com/louthy/language-ext/blob/main/LanguageExt.Core/Monads/Alternative%20Monads/Either/Either.Extensions.cs ---
     public static IEnumerable<T> Lefts<T,T2>(this IEnumerable<Either<T, T2>> eithers){
         return eithers.Aggregate(new List<T>(),
