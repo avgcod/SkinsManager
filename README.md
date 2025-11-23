@@ -3,9 +3,10 @@
 
 ## Features
 
-- Can automatically grab skins from the web.
+- Automatically grabs skins from the known skin websites.
 - Automatically creates a back up before applying skins.
 - Displays screenshots of skins if available.
+- Allows searching of available skins.
 
 ## Instructions
 
@@ -20,8 +21,3 @@
 - Select a skin to apply form the available skins listed in the box.
 - Click Apply Skin.
 - Click Start Game to run the game.
-
-## Notes
-- When pressing Refresh for the first time the program will first create the necessary folder structure in the previously selected Skins Folder if it is not already created.
-- The program will automatically create a back up of the files that the skin will overwrite if they have not already been backed up.
-- The program will only allow pulling skins from each site once every 24 hours to minimize bandwidth usage.
