@@ -131,10 +131,12 @@ public static class FileAccessService{
 
     public static Fin<bool> StartGame(string fileLocation){
         if (File.Exists(fileLocation)){
+            FileInfo fileInfo = new(fileLocation);
             ProcessStartInfo psInfo = new(){
-                FileName = Path.Combine(fileLocation),
-                Verb = "runas",
+                WorkingDirectory = fileInfo.Directory!.FullName,
+                FileName = fileLocation,
                 UseShellExecute = true
+                //Verb = "runas",
             };
 
             try{
